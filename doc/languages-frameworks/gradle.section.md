@@ -91,6 +91,9 @@ The update script flow:
 - Run the `preBuild` that was passed as an argument to `updateDeps`
 - Run `gradleCommands`, which defaults to `gradle nixDownloadDeps`
 - Run the `postBuild` that was passed as an argument to `updateDeps`
+- Finally, store all of the fetched files' hashes in the lockfile. They
+  may be `.jar`/`.pom` from Maven repositories, or they may be files
+  otherwise used for building the package.
 
 `updateDeps` takes the following arguments:
 
