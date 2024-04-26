@@ -11,6 +11,7 @@
 , pkg-config
 , qtbase
 , qtimageformats
+, qtsvg
 , qttools
 , qtwayland
 , wrapQtAppsHook
@@ -44,6 +45,7 @@ stdenv.mkDerivation rec {
     menu-cache
     qtbase
     qtimageformats # add-on module to support more image file formats
+    qtsvg
     qtwayland
   ];
 
