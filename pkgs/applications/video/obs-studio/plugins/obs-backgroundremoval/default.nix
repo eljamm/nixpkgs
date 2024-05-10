@@ -12,13 +12,13 @@
 
 stdenv.mkDerivation rec {
   pname = "obs-backgroundremoval";
-  version = "1.1.13";
+  version = "1.1.13-2";
 
   src = fetchFromGitHub {
     owner = "occ-ai";
     repo = "obs-backgroundremoval";
-    rev = version;
-    hash = "sha256-QoC9/HkwOXMoFNvcOxQkGCLLAJmsja801LKCNT9O9T0=";
+    rev = "94be8c35fe077be93a6f5ef347a802295a36dddd";
+    hash = "sha256-qnxDNeTWQYiRMqT6jNp8GC8ef6aaAAY+OXAak54dVc8=";
   };
 
   nativeBuildInputs = [ cmake ninja ];
@@ -35,8 +35,8 @@ stdenv.mkDerivation rec {
   ];
 
   buildPhase = ''
-     cd ..
-     cmake --build build_x86_64 --parallel
+    cd ..
+    cmake --build build_x86_64 --parallel
   '';
 
   installPhase = ''
