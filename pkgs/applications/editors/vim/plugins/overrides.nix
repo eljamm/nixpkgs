@@ -438,13 +438,19 @@
 
       # https://github.com/mistricky/codesnap.nvim/blob/main/scripts/build_generator.sh
       postInstall = let
-        extension = if stdenv.isDarwin then "dylib" else "so";
+        extension = stdenv.hostPlatform.extensions.sharedLibrary;
       in ''
-        cp ${codesnap-lib}/lib/libgenerator.${extension} lua/generator.so
+        cp ${codesnap-lib}/lib/libgenerator${extension} lua/generator${extension}
+      '';
+
+      preCheck = ''
+        mkdir tests/tmp/
+        echo 'print("Hello, World")' > tests/tmp/input.lua
       '';
 
       doInstallCheck = true;
       nvimRequireCheck = "codesnap";
+      vimCommandCheck = ":e tests/tmp/input.lua<CR>lua require('codesnap').setup({save_path='tests/tmp/out.png'})<CR>:norm! ggVG<CR>:CodeSnapSave txt<CR>";
     };
 
   command-t = super.command-t.overrideAttrs {
