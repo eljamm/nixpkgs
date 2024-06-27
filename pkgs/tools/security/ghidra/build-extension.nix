@@ -28,7 +28,7 @@ let
         echo -e '\nrootProject.name = "${pname}"' >> settings.gradle
       '';
 
-      gradleFlags = "-PGHIDRA_INSTALL_DIR=${ghidra}/lib/ghidra";
+      gradleFlags = [ "-PGHIDRA_INSTALL_DIR=${ghidra}/lib/ghidra" ];
 
       installPhase = args.installPhase or ''
         runHook preInstall
