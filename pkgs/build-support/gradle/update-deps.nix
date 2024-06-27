@@ -35,7 +35,7 @@
 , postBuild ? ""
 # run after the sandbox for fetching dependencies has stopped
 , postBuildNoSandbox ? ""
-, mitmCachePort ? 1337
+, mitmCachePort ? null
 # deps path (relative to the package directory), or absolute
 , depsPath ? "deps.json"
 # extra packages to make available in the sandbox
@@ -43,6 +43,9 @@
 }:
 
 let
+  mitmCachePortBash =
+    if mitmCachePort != null then "${toString mitmCachePort}"
+    else "$(${python3.pkgs.ephemeral-port-reserve}/bin/ephemeral-port-reserve 127.0.0.1)";
   keep = [ "MITM_CACHE_PORT" "MITM_CACHE_KEYSTORE" "MITM_CACHE_KS_PWD" "MITM_CACHE_CA" ];
   availablePackages' = map (drv: ''(builtins.storePath "${drv}")'') availablePackages;
   gradleScript = writeScript "gradle-commands.sh" ''
@@ -79,7 +82,7 @@ let
     cp -r "$source/src" "$SRC/"
     chmod -R +w "$SRC/src"
     cd "$SRC/src"
-    source "$source/script2"
+    source "$source/script"
     ${preBuild}
     ${gradleCommands}
     ${postBuild}
@@ -108,13 +111,12 @@ writeShellScript "fetch-deps.sh" ''
     lib.escapeShellArg (builtins.toJSON (builtins.toJSON attrOverrides))
   }")")"
 
-  source "$source/script1"
   pushd "$(mktemp -d)"
   MITM_CACHE_DIR="$PWD"
   trap "rm -rf '$MITM_CACHE_DIR'" SIGINT SIGTERM ERR EXIT
   ${openssl}/bin/openssl genrsa -out ca.key 2048
   ${openssl}/bin/openssl req -x509 -new -nodes -key ca.key -sha256 -days 1 -out ca.cer -subj "/C=AL/ST=a/L=a/O=a/OU=a/CN=example.org"
-  export MITM_CACHE_PORT="''${mitmCachePort:-${toString mitmCachePort}}"
+  export MITM_CACHE_PORT="''${mitmCachePort:-${mitmCachePortBash}}"
   # forget all redirects - this makes the lockfiles predictable
   # not only does this strip CDN URLs, but it also improves security - since the redirects aren't
   # stored in the lockfile, a malicious actor can't change the redirect URL stored in the lockfile

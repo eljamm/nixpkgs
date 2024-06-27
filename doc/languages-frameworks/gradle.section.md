@@ -122,7 +122,6 @@ The update script flow:
 The Gradle setup hook accepts the following environment variables:
 
 - `mitmCache` - the MITM proxy cache imported using `gradle.fetchDeps`
-- `mitmCachePort` - the MITM proxy port to be used (defaults to 1337)
 - `gradleFlags` - command-line flags to be used for every Gradle
   invocation (this simply registers a function that uses the necessary
   flags).
