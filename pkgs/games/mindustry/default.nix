@@ -4,6 +4,7 @@
 , makeDesktopItem
 , copyDesktopItems
 , fetchFromGitHub
+, fetchpatch
 , gradle
 , jdk17
 
@@ -90,6 +91,36 @@ stdenv.mkDerivation {
 
   patches = [
     ./0001-fix-include-path-for-SDL2-on-linux.patch
+    (fetchpatch {
+      url = "https://github.com/Anuken/Mindustry/commit/695dad201fb4c2b4252f2ee5abde32e968169ba5.patch";
+      hash = "sha256-bbTjyfUl+XFG/dgD1XPddVKD/ImOP5ARAP3q0FPnt58=";
+      name = "always-use-local-arc-1.patch";
+      stripLen = 1; extraPrefix = "Mindustry/";
+    })
+    (fetchpatch {
+      url = "https://github.com/Anuken/Mindustry/commit/f6082225e859c759c8d9c944250b6ecd490151ed.patch";
+      hash = "sha256-xFHdAUTS1EiHNQqw6qfzYk2LMr/DjeHoEzQfcfOUcFs=";
+      name = "always-use-local-arc-2.patch";
+      stripLen = 1; extraPrefix = "Mindustry/";
+    })
+    (fetchpatch {
+      url = "https://github.com/Anuken/Mindustry/commit/e4eadbbb7f35db3093a0a3d13272bdfbedfaead3.patch";
+      hash = "sha256-L/XQAxh6UgKsTVTgQKDXNRIAdtVtaY4ameT/Yb/+1p8=";
+      name = "always-use-local-arc-3.patch";
+      stripLen = 1; extraPrefix = "Mindustry/";
+    })
+    (fetchpatch {
+      url = "https://github.com/Anuken/Arc/commit/2a91c51bf45d700091e397fd0b62384763901ae6.patch";
+      hash = "sha256-sSD78GmF14vBvNe+ajUJ4uIc4p857shTP/UkAK6Pyyg=";
+      name = "fix-build-1.patch";
+      stripLen = 1; extraPrefix = "Arc/";
+    })
+    (fetchpatch {
+      url = "https://github.com/Anuken/Arc/commit/d7f8ea858c425410dbd43374271a703d4443b432.patch";
+      hash = "sha256-5LPgBOV0r/dUtpyxitTu3/9tMIqjeIKfGVJi3MEr7fQ=";
+      name = "fix-build-2.patch";
+      stripLen = 1; extraPrefix = "Arc/";
+    })
   ];
 
   postPatch = ''
