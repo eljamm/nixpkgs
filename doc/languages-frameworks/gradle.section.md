@@ -1,6 +1,6 @@
 # Gradle {#gradle}
 
-Gradle is a popular build tool for Java/Kotlin. Unfortunately, despites
+Gradle is a popular build tool for Java/Kotlin. Unfortunately, despite
 its ubiquity, it has many poor design decisions. Because Gradle itself
 doesn't offer reproducible builds in any meaningful way, nixpkgs has a
 man-in-the-middle-proxy designed for intercepting Gradle web requests.

@@ -1,3 +1,5 @@
+# A derivation that unpacks and patches the source, and also runs the configure
+# phase and exports some env variables and the current working directory
 { self
 , attrOverrides ? { }
 }:
