@@ -4,6 +4,7 @@
 , rustPlatform
 , substituteAll
 , openssl
+, python3Packages
 }:
 
 rustPlatform.buildRustPackage {
@@ -22,6 +23,7 @@ rustPlatform.buildRustPackage {
   setupHook = substituteAll {
     src = ./setup-hook.sh;
     inherit openssl;
+    ephemeral_port_reserve = python3Packages.ephemeral-port-reserve;
   };
 
   passthru.fetch = callPackage ./fetch.nix { };
