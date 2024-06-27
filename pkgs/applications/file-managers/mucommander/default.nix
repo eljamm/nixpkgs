@@ -11,6 +11,12 @@ let
   pname = "mucommander";
   version = "1.3.0-1";
 
+  gradle = gradle_7;
+
+in
+stdenv.mkDerivation {
+  inherit pname version;
+
   src = fetchFromGitHub {
     owner = "mucommander";
     repo = "mucommander";
@@ -26,11 +32,6 @@ let
       --replace "revision = git.head().id" "revision = '${version}'"
   '';
 
-  gradle = gradle_7;
-
-in
-stdenv.mkDerivation {
-  inherit pname version src postPatch;
   nativeBuildInputs = [ gradle makeWrapper ];
 
   mitmCache = gradle.fetchDeps {
