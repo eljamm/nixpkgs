@@ -13,11 +13,11 @@ rustPlatform.buildRustPackage {
   src = fetchFromGitHub {
     owner = "chayleaf";
     repo = "mitm-cache";
-    rev = "49c12d99878b86b47a911ebdee9d1f5c4b7a1c95";
-    hash = "sha256-wVefXc1jPltITn4CFC1ScZtAx02r0EOIz2VhjgWUWrE=";
+    rev = "0781f7ee8def68887f696c70fe7fd77aa583cb9f";
+    hash = "sha256-KlWWB0Eht9meCzKUGrWoyQsn4YI6e1UslOVK8QmKMkY=";
   };
 
-  cargoHash = "sha256-7sMtD1EOljiGjnN+sWhGtwx3io81qIIIST8AZRu4NdM=";
+  cargoHash = "sha256-pltVvzX4t1oL06pYaEIaqZ9ki8Vj78lglYRDUdS4mH8=";
 
   setupHook = substituteAll {
     src = ./setup-hook.sh;
