@@ -24,13 +24,17 @@ in
               # TODO upcase?
               default = "KUDOS";
             };
+            currency_round_unit = lib.mkOption {
+              # TODO: refactor
+              default = "KUDOS:0.01";
+            };
           };
         };
       };
       default = { };
     };
     includes = lib.mkOption {
-      type = with lib.types; listOf str;
+      type = with lib.types; listOf path;
       default = [ ];
       description = ''
         Files to include into the config file using Taler's `@inline@` directive.
