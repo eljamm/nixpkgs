@@ -62,7 +62,7 @@ in
     debug = lib.mkEnableOption "debug logging";
   };
 
-  config = lib.mkIf this.enable {
+  config = lib.mkIf (config.services.taler.enable && this.enable) {
     services.taler.includes = [
       (pkgs.writers.writeText "exchange-denominations.conf" this.denominationConfig)
     ];
