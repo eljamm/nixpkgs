@@ -32,6 +32,19 @@ in
   options.services.taler.exchange = {
     enable = lib.mkEnableOption "the GNU Taler exchange";
     package = lib.mkPackageOption pkgs "taler-exchange" { };
+    accounts = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ "user" ];
+      example = [
+        "exchange"
+        "user"
+      ];
+      # type = lib.types.lines;
+      # default = "";
+      # example = '''';
+      # TODO:
+      description = '''';
+    };
     denominationConfig = lib.mkOption {
       type = lib.types.lines;
       default = "";
@@ -77,8 +90,8 @@ in
       before = [ "slices.target" ];
     };
 
-    systemd.services =
-      lib.genAttrs (map (n: "taler-exchange-${n}") services) (name: {
+    systemd.services = lib.mergeAttrsList [
+      (lib.genAttrs (map (n: "taler-exchange-${n}") services) (name: {
         serviceConfig = {
           DynamicUser = true;
           User = name;
@@ -98,8 +111,8 @@ in
         requires = [ "taler-exchange-dbinit.service" ];
         after = [ "taler-exchange-dbinit.service" ];
         wantedBy = [ "multi-user.target" ]; # TODO slice?
-      })
-      // {
+      }))
+      {
         taler-exchange-dbinit = {
           path = [ config.services.postgresql.package ];
           script =
@@ -130,28 +143,52 @@ in
             User = "taler-exchange-httpd";
           };
         };
-      };
+      }
+      {
+        taler-exchange-accounts = {
+          path = [ this.package ];
+          script =
+            let
+              hostname = config.services.taler.settings.exchange.HOSTNAME;
+            in
+            builtins.concatStringsSep "\n" (
+              map (name: ''
+                taler-exchange-offline enable-account "payto://x-taler-bank/${hostname}/${name}?receiver-name=exchange" upload
+              '') this.accounts
+            );
+          requires = [ "taler-exchange-dbinit.service" ];
+          after = [ "taler-exchange-dbinit.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            DynamicUser = true;
+            User = "taler-exchange-httpd";
+          };
+        };
+      }
+    ];
+
     services.taler.settings = {
       exchange = {
         # TODO these should be generated from high-level NixOS options
-        AML_THRESHOLD = "KUDOS:1000000";
-        MAX_KEYS_CACHING = "forever";
-        DB = "postgres";
-        MASTER_PUBLIC_KEY = "Q6KCV81R9T3SC41T5FCACC2D084ACVH5A25FH44S6M5WXWZAA8P0";
+        AML_THRESHOLD = lib.mkDefault "KUDOS:1000000";
+        MAX_KEYS_CACHING = lib.mkDefault "forever";
+        DB = lib.mkDefault "postgres";
+        MASTER_PUBLIC_KEY = lib.mkDefault "Q6KCV81R9T3SC41T5FCACC2D084ACVH5A25FH44S6M5WXWZAA8P0";
         # WIRE_RESPONSE = ${TALER_DATA_HOME}/exchange/account-1.json;
 
-        PORT = 8081; # TODO option
-        BASE_URL = "https://exchange.hephaistos.foo.bar/"; # TODO ensure / is present!
-        SIGNKEY_DURATION = "2 weeks";
-        SIGNKEY_LEGAL_DURATION = "2 years";
-        LOOKAHEAD_SIGN = "3 weeks 1 day";
-        KEYDIR = "\${TALER_DATA_HOME}/exchange/live-keys/";
-        REVOCATION_DIR = "\${TALER_DATA_HOME}/exchange/revocations/";
-        TERMS_ETAG = 0;
-        PRIVACY_ETAG = 0;
+        PORT = lib.mkDefault 8081; # TODO option
+        HOSTNAME = lib.mkDefault "exchange.hephaistos.foo.bar"; # TODO ensure / is present!
+        BASE_URL = lib.mkDefault "https://exchange.hephaistos.foo.bar/"; # TODO ensure / is present!
+        SIGNKEY_DURATION = lib.mkDefault "2 weeks";
+        SIGNKEY_LEGAL_DURATION = lib.mkDefault "2 years";
+        LOOKAHEAD_SIGN = lib.mkDefault "3 weeks 1 day";
+        KEYDIR = lib.mkDefault "\${TALER_DATA_HOME}/exchange/live-keys/";
+        REVOCATION_DIR = lib.mkDefault "\${TALER_DATA_HOME}/exchange/revocations/";
+        TERMS_ETAG = lib.mkDefault 0;
+        PRIVACY_ETAG = lib.mkDefault 0;
       };
       exchangedb-postgres = {
-        CONFIG = "postgres:///${dbName}";
+        CONFIG = lib.mkDefault "postgres:///${dbName}";
       };
       PATHS = {
         TALER_DATA_HOME = "\${STATE_DIRECTORY}/";
