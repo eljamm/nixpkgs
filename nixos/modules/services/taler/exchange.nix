@@ -156,8 +156,8 @@ in
                 taler-exchange-offline enable-account "payto://x-taler-bank/${hostname}/${name}?receiver-name=exchange" upload
               '') this.accounts
             );
-          requires = [ "taler-exchange-dbinit.service" ];
-          after = [ "taler-exchange-dbinit.service" ];
+          requires = [ "taler-exchange-httpd.service" ];
+          after = [ "taler-exchange-httpd.service" ];
           serviceConfig = {
             Type = "oneshot";
             DynamicUser = true;
