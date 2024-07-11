@@ -104,10 +104,10 @@ in
               dbScript = pkgs.writers.writeText "taler-exchange-db-permissions.sql" ''
                 GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-aggregator";
                 GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-closer";
-                GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-wire";
-                GRANT USAGE ON ALL SEQUENCES IN SCHEMA exchange TO "taler-exchange-aggregator";
-                GRANT USAGE ON ALL SEQUENCES IN SCHEMA exchange TO "taler-exchange-closer";
-                GRANT USAGE ON ALL SEQUENCES IN SCHEMA exchange TO "taler-exchange-wire";
+                GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-wirewatch";
+                GRANT USAGE ON SCHEMA exchange TO "taler-exchange-aggregator";
+                GRANT USAGE ON SCHEMA exchange TO "taler-exchange-closer";
+                GRANT USAGE ON SCHEMA exchange TO "taler-exchange-wirewatch";
               '';
             in
             ''
