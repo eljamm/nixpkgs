@@ -12,7 +12,7 @@ let
     "httpd"
     "aggregator"
     "closer"
-    "wire"
+    "wirewatch"
   ];
   # Services that do not need access to the DB
   servicesNoDB = [
