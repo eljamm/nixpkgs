@@ -47,7 +47,7 @@ in
     };
     denominationConfig = lib.mkOption {
       type = lib.types.lines;
-      default = "";
+      default = throw "You must set the denomination config `services.taler.exchange.denominationConfig`.";
       example = ''
         [COIN-KUDOS-n1-t1718140083]
         VALUE = KUDOS:0.1
@@ -77,12 +77,7 @@ in
 
   config = lib.mkIf (config.services.taler.enable && this.enable) {
     services.taler.includes = [
-      (pkgs.writers.writeText "exchange-denominations.conf" (
-        if (this.denominationConfig == "") then
-          (throw "You must set the denomination config `services.taler.exchange.denominationConfig`.")
-        else
-          this.denominationConfig
-      ))
+      (pkgs.writers.writeText "exchange-denominations.conf" (this.denominationConfig))
     ];
 
     systemd.slices.taler-exchange = {
