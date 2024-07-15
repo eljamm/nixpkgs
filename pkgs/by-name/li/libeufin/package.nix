@@ -5,6 +5,8 @@
   python3,
   jdk17_headless,
   gradle,
+  jre_headless,
+  makeWrapper,
 }:
 
 stdenv.mkDerivation rec {
@@ -54,6 +56,7 @@ stdenv.mkDerivation rec {
     python3
     jdk17_headless
     gradle
+    makeWrapper
   ];
 
   # # Tell gradle to use the offline Maven repository
@@ -62,7 +65,19 @@ stdenv.mkDerivation rec {
   # '';
 
   installPhase = ''
+    runHook preInstall
+
     make install-nobuild
+
+    for exe in libeufin-nexus libeufin-bank ; do
+      wrapProgram $out/bin/$exe \
+        --set JAVA_HOME ${jdk17_headless.home} \
+        --prefix PATH : $out/bin \
+        --prefix PATH : ${lib.makeBinPath [ jdk17_headless ]} \
+
+    done
+
+    runHook postInstall
   '';
 
   # Tests need a database to run.
