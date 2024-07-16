@@ -6,10 +6,8 @@
 }:
 
 let
+  this = config.services.taler;
   settingsFormat = pkgs.formats.ini { };
-  runtimeDir = "/run/taler-system-runtime/";
-  dbExchange = "taler-exchange-httpd";
-  dbLibeufin = "libeufin";
 in
 
 {
@@ -17,16 +15,6 @@ in
     type = lib.types.submodule {
       freeformType = settingsFormat.type;
       options = {
-        taler = {
-          CURRENCY = lib.mkOption {
-            type = lib.types.str;
-            default = "KUDOS";
-          };
-          CURRENCY_ROUND_UNIT = lib.mkOption {
-            type = lib.types.str;
-            default = "KUDOS:0.01";
-          };
-        };
         PATHS = {
           TALER_DATA_HOME = lib.mkOption {
             type = lib.types.str;
@@ -38,14 +26,23 @@ in
           };
           TALER_RUNTIME_DIR = lib.mkOption {
             type = lib.types.str;
-            default = runtimeDir; # TODO refactor into constant
+            default = "/run/taler-system-runtime/";
+          };
+        };
+        taler = {
+          CURRENCY = lib.mkOption {
+            type = lib.types.str;
+            default = "KUDOS";
+          };
+          CURRENCY_ROUND_UNIT = lib.mkOption {
+            type = lib.types.str;
+            default = "${this.settings.taler.CURRENCY}:0.01";
           };
         };
         exchange = {
-          # TODO these should be generated from high-level NixOS options
           AML_THRESHOLD = lib.mkOption {
             type = lib.types.str;
-            default = "KUDOS:1000000";
+            default = "${this.settings.taler.CURRENCY}:1000000";
           };
           MAX_KEYS_CACHING = lib.mkOption {
             type = lib.types.str;
@@ -59,19 +56,18 @@ in
             type = lib.types.str;
             default = "Q6KCV81R9T3SC41T5FCACC2D084ACVH5A25FH44S6M5WXWZAA8P0";
           };
-          # WIRE_RESPONSE = lib.mkOption {
-          #   #type = lib.types.str;
-          #   default = "\${TALER_DATA_HOME}/exchange/account-1.json";
-          # };
           PORT = lib.mkOption {
-            # TODO option
             type = lib.types.port;
             default = 8081;
+          };
+          HOSTNAME = lib.mkOption {
+            type = lib.types.str;
+            default = "exchange.hephaistos.foo.bar";
           };
           BASE_URL = lib.mkOption {
             # TODO ensure / is present!
             type = lib.types.str;
-            default = "https://exchange.hephaistos.foo.bar/";
+            default = "https://${this.settings.exchange.HOSTNAME}/"; # TODO: check localhost?
           };
           SIGNKEY_DURATION = lib.mkOption {
             type = lib.types.str;
@@ -105,13 +101,13 @@ in
         exchangedb-postgres = {
           CONFIG = lib.mkOption {
             type = lib.types.str;
-            default = "postgres:///${dbExchange}";
+            default = "postgres:///taler-exchange-httpd";
           };
         };
         libeufin-bank = {
           CURRENCY = lib.mkOption {
             type = lib.types.str;
-            default = "KUDOS";
+            default = "${this.settings.taler.CURRENCY}";
           };
           SERVE = lib.mkOption {
             type = lib.types.str;
@@ -134,7 +130,7 @@ in
           # If WIRE_#type = lib.mkDefault x-taler-bank
           X_TALER_BANK_PAYTO_HOSTNAME = lib.mkOption {
             type = lib.types.str;
-            default = "http://libeufin.hephaistos.foo.bar:8082/";
+            default = "http://${this.settings.libeufin-bank.BIND_TO}/"; # TODO: check localhost?
           };
           #TODO:
           # If WIRE_#type = lib.mkDefault iban
@@ -144,7 +140,7 @@ in
           # };
           REGISTRATION_BONUS = lib.mkOption {
             type = lib.types.str;
-            default = "KUDOS:100";
+            default = "${this.settings.taler.CURRENCY}:100";
           };
           ALLOW_REGISTRATION = lib.mkOption {
             type = lib.types.str;
@@ -157,19 +153,19 @@ in
           #TODO: check SSL to determine http or https
           SUGGESTED_WITHDRAWAL_EXCHANGE = lib.mkOption {
             type = lib.types.str;
-            default = "https://exchange.hephaistos.foo.bar:8081/";
+            default = "https://${this.settings.exchange.HOSTNAME}/"; # TODO: check localhost?
           };
         };
         libeufin-bankdb-postgres = {
           CONFIG = lib.mkOption {
             type = lib.types.str;
-            default = "postgresql:///${dbLibeufin}";
+            default = "postgresql:///libeufin";
           };
         };
         libeufin-nexusdb-postgres = {
           CONFIG = lib.mkOption {
             type = lib.types.str;
-            default = "postgresql:///${dbLibeufin}";
+            default = "postgresql:///libeufin";
           };
         };
       };
