@@ -20,18 +20,30 @@ in
 
   config = lib.mkIf (talerEnabled && this.enable) {
     systemd.services = {
+      libeufin = {
+        script =
+          "${this.package}/bin/libeufin-bank serve -c ${configFile}"
+          + lib.optionalString this.debug " -L debug";
+        serviceConfig = {
+          DynamicUser = true;
+          User = "libeufin";
+        };
+        requires = [ "libeufin-dbinit.service" ];
+        after = [ "libeufin-dbinit.service" ];
+        wantedBy = [ "multi-user.target" ]; # TODO slice?
+      };
       libeufin-dbinit = {
         path = [ config.services.postgresql.package ];
         script =
-          "${this.package}/bin/libeufin-bank-dbinit -c ${configFile}"
+          "${this.package}/bin/libeufin-bank dbinit -c ${configFile}"
           + lib.optionalString this.debug " -L debug";
-        requires = [ "postgresql.service" ];
-        after = [ "postgresql.service" ];
         serviceConfig = {
           Type = "oneshot";
           DynamicUser = true;
           User = "libeufin";
         };
+        requires = [ "postgresql.service" ];
+        after = [ "postgresql.service" ];
       };
     };
 
