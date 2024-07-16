@@ -5,7 +5,6 @@
   python3,
   jdk17_headless,
   gradle,
-  jre_headless,
   makeWrapper,
 }:
 
@@ -50,7 +49,10 @@ stdenv.mkDerivation rec {
   };
 
   gradleFlags = [ "-Dorg.gradle.java.home=${jdk17_headless}" ];
-  gradleBuildTask = [ "bank:installShadowDist" "nexus:installShadowDist" ];
+  gradleBuildTask = [
+    "bank:installShadowDist"
+    "nexus:installShadowDist"
+  ];
 
   nativeBuildInputs = [
     python3
@@ -84,9 +86,7 @@ stdenv.mkDerivation rec {
   # TODO there's a postgres runner thingy you could use here
   doCheck = false;
 
-  passthru.updateDeps = gradle.updateDeps {
-    inherit pname;
-  };
+  passthru.updateDeps = gradle.updateDeps { inherit pname; };
 
   meta = {
     homepage = "https://git.taler.net/libeufin.git/";
