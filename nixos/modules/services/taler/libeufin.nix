@@ -7,8 +7,9 @@
 let
   this = config.services.taler.libeufin;
   talerEnabled = config.services.taler.enable;
+  talerSettings = config.services.taler.settings;
   dbName = "libeufin";
-  inherit (config.services.taler) configFile settings;
+  inherit (config.services.taler) configFile;
 in
 {
   options.services.taler.libeufin = {
@@ -19,23 +20,23 @@ in
 
   config = lib.mkIf (talerEnabled && this.enable) {
     services.taler.settings = {
-      libeufin-bank = {
-        CURRENCY = lib.mkDefault "${settings.taler.CURRENCY}"; # TODO: lower case or upper?
-        SERVE = lib.mkDefault "tcp";
-        PORT = lib.mkDefault 8082;
-        BIND_TO = lib.mkDefault "0.0 0.0"; # TODO: set a HOSTNAME to this as well?
-        WIRE_TYPE = lib.mkDefault "x-taler-bank";
+      libeufin-bank = rec {
+        CURRENCY = "KUDOS"; # TODO: lower case or upper?
+        SERVE = "tcp";
+        PORT = 8082;
+        BIND_TO = "libeufin.hephaistos.foo.bar"; # TODO: set a HOSTNAME to this as well?
+        WIRE_TYPE = "x-taler-bank";
         #TODO: check WIRE_TYPE and set X_TALER_BANK_PAYTO_HOSTNAME and IBAN_PAYTO_BIC
-        # If WIRE_TYPE = lib.mkDefault x-taler-bank
-        X_TALER_BANK_PAYTO_HOSTNAME = lib.mkDefault "http://${settings.libeufin-bank.BIND_TO}:${settings.libeufin-bank.PORT}/";
+        # If WIRE_TYPE = x-taler-bank
+        X_TALER_BANK_PAYTO_HOSTNAME = "http://${BIND_TO}:${toString PORT}/";
         #TODO:
         # If WIRE_TYPE = iban
-        #IBAN_PAYTO_BIC = lib.mkDefault "SANDBOXX";
-        REGISTRATION_BONUS = lib.mkDefault "KUDOS:1000";
-        ALLOW_REGISTRATION = lib.mkDefault "yes";
-        ALLOW_ACCOUNT_DELETION = lib.mkDefault "yes";
+        #IBAN_PAYTO_BIC = "SANDBOXX";
+        REGISTRATION_BONUS = "${CURRENCY}:100";
+        ALLOW_REGISTRATION = "yes";
+        ALLOW_ACCOUNT_DELETION = "yes";
         #TODO: check SSL to determine http or https
-        SUGGESTED_WITHDRAWAL_EXCHANGE = lib.mkDefault "https://${settings.exchange.HOSTNAME}:${settings.exchange.port}/";
+        SUGGESTED_WITHDRAWAL_EXCHANGE = "https://${talerSettings.exchange.HOSTNAME}:${toString talerSettings.exchange.PORT}/";
       };
       libeufin-bankdb-postgres = {
         CONFIG = "postgresql:///${dbName}";
