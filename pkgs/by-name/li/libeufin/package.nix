@@ -5,7 +5,6 @@
   python3,
   jdk17_headless,
   gradle,
-  jre_headless,
   makeWrapper,
 }:
 
@@ -54,7 +53,10 @@ stdenv.mkDerivation rec {
   };
 
   gradleFlags = [ "-Dorg.gradle.java.home=${jdk17_headless}" ];
-  gradleBuildTask = [ "bank:installShadowDist" "nexus:installShadowDist" ];
+  gradleBuildTask = [
+    "bank:installShadowDist"
+    "nexus:installShadowDist"
+  ];
 
   nativeBuildInputs = [
     customPython
