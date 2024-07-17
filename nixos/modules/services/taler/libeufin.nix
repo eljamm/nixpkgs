@@ -22,7 +22,7 @@ in
     systemd.services = {
       ${bankServiceName} = {
         script =
-          "${this.package}/bin/libeufin-bank serve -c ${configFile}"
+          "${lib.getExe this.package} serve -c ${configFile}"
           + lib.optionalString this.debug " -L debug";
         serviceConfig = {
           DynamicUser = true;
@@ -35,7 +35,7 @@ in
       libeufin-dbinit = {
         path = [ config.services.postgresql.package ];
         script =
-          "${this.package}/bin/libeufin-bank dbinit -c ${configFile}"
+          "${lib.getExe this.package} dbinit -c ${configFile}"
           + lib.optionalString this.debug " -L debug";
         serviceConfig = {
           Type = "oneshot";
