@@ -5,14 +5,13 @@
   ...
 }:
 let
-  this = config.services.taler.libeufin;
+  this = config.services.taler.libeufin.bank;
   talerEnabled = config.services.taler.enable;
-  talerSettings = config.services.taler.settings;
   dbName = "libeufin";
   inherit (config.services.taler) configFile;
 in
 {
-  options.services.taler.libeufin = {
+  options.services.taler.libeufin.bank = {
     enable = lib.mkEnableOption "GNU Taler libeufin bank";
     package = lib.mkPackageOption pkgs "libeufin" { };
     debug = lib.mkEnableOption "debug logging";
@@ -49,11 +48,10 @@ in
 
     services.postgresql.enable = true;
     services.postgresql.ensureDatabases = [ dbName ];
-    #TODO: what services need DB access?
     services.postgresql.ensureUsers = [
       {
-        name = "${dbName}";
-        ensureDBOwnership = true; # TODO clean this up
+        name = dbName;
+        ensureDBOwnership = true;
       }
     ];
   };
