@@ -20,7 +20,7 @@ in
 
   config = lib.mkIf (talerEnabled && this.enable) {
     systemd.services = {
-      "${bankServiceName}" = {
+      ${bankServiceName} = {
         script =
           "${this.package}/bin/libeufin-bank serve -c ${configFile}"
           + lib.optionalString this.debug " -L debug";
