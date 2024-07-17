@@ -7,7 +7,7 @@
 let
   this = config.services.taler.libeufin.bank;
   talerEnabled = config.services.taler.enable;
-  dbName = "libeufin";
+  bankServiceName = "libeufin-bank";
   inherit (config.services.taler) configFile;
 in
 {
@@ -15,17 +15,18 @@ in
     enable = lib.mkEnableOption "GNU Taler libeufin bank";
     package = lib.mkPackageOption pkgs "libeufin" { };
     debug = lib.mkEnableOption "debug logging";
+    # TODO admin password option
   };
 
   config = lib.mkIf (talerEnabled && this.enable) {
     systemd.services = {
-      libeufin = {
+      "${bankServiceName}" = {
         script =
           "${this.package}/bin/libeufin-bank serve -c ${configFile}"
           + lib.optionalString this.debug " -L debug";
         serviceConfig = {
           DynamicUser = true;
-          User = "libeufin";
+          User = bankServiceName;
         };
         requires = [ "libeufin-dbinit.service" ];
         after = [ "libeufin-dbinit.service" ];
@@ -39,18 +40,20 @@ in
         serviceConfig = {
           Type = "oneshot";
           DynamicUser = true;
-          User = "libeufin";
+          User = bankServiceName;
         };
         requires = [ "postgresql.service" ];
         after = [ "postgresql.service" ];
       };
     };
 
+    services.taler.settings.libeufin-bankdb-postgres.CONFIG = "postgresql:///${bankServiceName}";
+
     services.postgresql.enable = true;
-    services.postgresql.ensureDatabases = [ dbName ];
+    services.postgresql.ensureDatabases = [ bankServiceName ];
     services.postgresql.ensureUsers = [
       {
-        name = dbName;
+        name = bankServiceName;
         ensureDBOwnership = true;
       }
     ];

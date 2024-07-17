@@ -133,7 +133,6 @@ in
           CONFIG = lib.mkOption {
             type = lib.types.str;
             internal = true;
-            default = "postgresql:///libeufin";
           };
         };
       };
