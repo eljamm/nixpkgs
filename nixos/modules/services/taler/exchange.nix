@@ -35,7 +35,9 @@ in
     package = lib.mkPackageOption pkgs "taler-exchange" { };
     denominationConfig = lib.mkOption {
       type = lib.types.lines;
+      # TODO how to boostrap?
       default = throw "You must set the denomination config `services.taler.exchange.denominationConfig`.";
+      defaultText = "None, you must set this yourself.";
       example = ''
         [COIN-KUDOS-n1-t1718140083]
         VALUE = KUDOS:0.1
