@@ -15,156 +15,124 @@ in
     type = lib.types.submodule {
       freeformType = settingsFormat.type;
       options = {
+        # Should these be in here?
+        # Should these even be configurable?
         PATHS = {
           TALER_DATA_HOME = lib.mkOption {
             type = lib.types.str;
+            internal = true;
             default = "\${STATE_DIRECTORY}/";
           };
           TALER_CACHE_HOME = lib.mkOption {
             type = lib.types.str;
+            internal = true;
             default = "\${CACHE_DIRECTORY}/";
           };
           TALER_RUNTIME_DIR = lib.mkOption {
             type = lib.types.str;
+            internal = true;
             default = "/run/taler-system-runtime/";
           };
         };
         taler = {
           CURRENCY = lib.mkOption {
             type = lib.types.str;
-            default = "KUDOS";
+            default = throw "You must set `taler.CURRENCY` to your desired currency.";
+            defaultText = "None, you must set this yourself.";
+            description = ''
+              The currency which taler services will operate with. This cannot be changed later.
+            '';
           };
           CURRENCY_ROUND_UNIT = lib.mkOption {
             type = lib.types.str;
             default = "${this.settings.taler.CURRENCY}:0.01";
+            defaultText = "0.01 in {option}`CURRENCY`";
+            description = ''
+              Smallest amount in this currency that can be transferred using the underlying RTGS.
+
+              You should probably not touch this.
+            '';
           };
         };
+        # TODO can you put this into the exchange module somehow?
         exchange = {
           AML_THRESHOLD = lib.mkOption {
             type = lib.types.str;
             default = "${this.settings.taler.CURRENCY}:1000000";
-          };
-          MAX_KEYS_CACHING = lib.mkOption {
-            type = lib.types.str;
-            default = "forever";
+            defaultText = "1000000 in {option}`CURRENCY`";
           };
           DB = lib.mkOption {
             type = lib.types.str;
+            internal = true;
             default = "postgres";
           };
           MASTER_PUBLIC_KEY = lib.mkOption {
             type = lib.types.str;
-            default = "Q6KCV81R9T3SC41T5FCACC2D084ACVH5A25FH44S6M5WXWZAA8P0";
+            # TODO link some sort of manual on how the master key works here
+            default = throw ''
+              You must provide `MASTER_PUBLIC_KEY` with the public part of your master key.
+
+              To generate this key, you must run `taler-exchange-offline setup`. It will print the public key.
+            '';
+            defaultText = "None, you must set this yourself.";
           };
           PORT = lib.mkOption {
             type = lib.types.port;
             default = 8081;
           };
-          HOSTNAME = lib.mkOption {
-            type = lib.types.str;
-            default = "exchange.hephaistos.foo.bar";
-          };
-          BASE_URL = lib.mkOption {
-            # TODO ensure / is present!
-            type = lib.types.str;
-            default = "https://${this.settings.exchange.HOSTNAME}/"; # TODO: check localhost?
-          };
-          SIGNKEY_DURATION = lib.mkOption {
-            type = lib.types.str;
-            default = "2 weeks";
-          };
-          SIGNKEY_LEGAL_DURATION = lib.mkOption {
-            type = lib.types.str;
-            default = "2 years";
-          };
-          LOOKAHEAD_SIGN = lib.mkOption {
-            type = lib.types.str;
-            default = "3 weeks 1 day";
-          };
-          KEYDIR = lib.mkOption {
-            type = lib.types.str;
-            default = "\${TALER_DATA_HOME}/exchange/live-keys/";
-          };
-          REVOCATION_DIR = lib.mkOption {
-            type = lib.types.str;
-            default = "\${TALER_DATA_HOME}/exchange/revocations/";
-          };
-          TERMS_ETAG = lib.mkOption {
-            type = lib.types.int;
-            default = 0;
-          };
-          PRIVACY_ETAG = lib.mkOption {
-            type = lib.types.int;
-            default = 0;
-          };
         };
         exchangedb-postgres = {
           CONFIG = lib.mkOption {
             type = lib.types.str;
+            internal = true;
             default = "postgres:///taler-exchange-httpd";
           };
         };
+        # TODO into the libeufin.bank module
         libeufin-bank = {
           CURRENCY = lib.mkOption {
             type = lib.types.str;
             default = "${this.settings.taler.CURRENCY}";
-          };
-          SERVE = lib.mkOption {
-            type = lib.types.str;
-            default = "tcp";
+            defaultText = "{option}`taler.settings.CURRENCY`";
+            description = ''
+              The currency under which the libeufin-bank should operate.
+
+              This defaults to the GNU taler module's currency for convenience
+              but if you run libeufin-bank separately from taler, you must set
+              this yourself.
+            '';
           };
           PORT = lib.mkOption {
             type = lib.types.port;
             default = 8082;
+            description = ''
+              The port on which libeufin-bank should listen.
+            '';
           };
-          BIND_TO = lib.mkOption {
-            # TODO: set a HOSTNAME to this as well?
-            type = lib.types.str;
-            default = "libeufin.hephaistos.foo.bar";
-          };
-          WIRE_type = lib.mkOption {
-            type = lib.types.str;
-            default = "x-taler-bank";
-          };
-          #TODO: check WIRE_#type and set X_TALER_BANK_PAYTO_HOSTNAME and IBAN_PAYTO_BIC
-          # If WIRE_#type = lib.mkDefault x-taler-bank
-          X_TALER_BANK_PAYTO_HOSTNAME = lib.mkOption {
-            type = lib.types.str;
-            default = "http://${this.settings.libeufin-bank.BIND_TO}/"; # TODO: check localhost?
-          };
-          #TODO:
-          # If WIRE_#type = lib.mkDefault iban
-          # IBAN_PAYTO_BIC = lib.mkOption {
-          #   type = lib.types.str;
-          #   default = "SANDBOXX";
-          # };
-          REGISTRATION_BONUS = lib.mkOption {
-            type = lib.types.str;
-            default = "${this.settings.taler.CURRENCY}:100";
-          };
-          ALLOW_REGISTRATION = lib.mkOption {
-            type = lib.types.str;
-            default = "yes";
-          };
-          ALLOW_ACCOUNT_DELETION = lib.mkOption {
-            type = lib.types.str;
-            default = "yes";
-          };
-          #TODO: check SSL to determine http or https
           SUGGESTED_WITHDRAWAL_EXCHANGE = lib.mkOption {
             type = lib.types.str;
-            default = "https://${this.settings.exchange.HOSTNAME}/"; # TODO: check localhost?
+            default = "https://exchange.demo.taler.net/";
+            description = ''
+              Exchange that is suggested to wallets when withdrawing.
+
+              Note that, in order for withdrawals to work, your libeufin-bank
+              must be able to communicate with and send money etc. to the bank
+              at which the exchange used for withdrawals has its bank account.
+
+              If you also have your own bank and taler exchange network, you
+              probably want to set one of your exchange's url here instead of
+              the demo exchange.
+
+              This setting must always be set in order for the Android app to
+              not crash during the withdrawal process but the exchange to be
+              used can always be changed in the app.
+            '';
           };
         };
         libeufin-bankdb-postgres = {
           CONFIG = lib.mkOption {
             type = lib.types.str;
-            default = "postgresql:///libeufin";
-          };
-        };
-        libeufin-nexusdb-postgres = {
-          CONFIG = lib.mkOption {
-            type = lib.types.str;
+            internal = true;
             default = "postgresql:///libeufin";
           };
         };
