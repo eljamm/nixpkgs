@@ -12,12 +12,16 @@ in
 
 {
   imports = [
+    # This should be in the respective modules
     ./config.nix
     ./exchange.nix
   ];
 
+  # turn this into a generic taler-like service thingy?
   options.services.taler = {
-    enable = lib.mkEnableOption "the GNU Taler system";
+    enable = lib.mkEnableOption "the GNU Taler system" // lib.mkOption {
+      internal = true;
+    };
     includes = lib.mkOption {
       type = with lib.types; listOf path;
       default = [ ];
@@ -45,7 +49,7 @@ in
     };
   };
 
-  config = {
+  config = lib.mkIf (this.enable) {
     environment.etc."taler/taler.conf".source = this.configFile;
   };
 }
