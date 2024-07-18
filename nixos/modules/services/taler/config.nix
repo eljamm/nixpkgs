@@ -54,40 +54,6 @@ in
             '';
           };
         };
-        # TODO can you put this into the exchange module somehow?
-        exchange = {
-          AML_THRESHOLD = lib.mkOption {
-            type = lib.types.str;
-            default = "${this.settings.taler.CURRENCY}:1000000";
-            defaultText = "1000000 in {option}`CURRENCY`";
-          };
-          DB = lib.mkOption {
-            type = lib.types.str;
-            internal = true;
-            default = "postgres";
-          };
-          MASTER_PUBLIC_KEY = lib.mkOption {
-            type = lib.types.str;
-            # TODO link some sort of manual on how the master key works here
-            default = throw ''
-              You must provide `MASTER_PUBLIC_KEY` with the public part of your master key.
-
-              To generate this key, you must run `taler-exchange-offline setup`. It will print the public key.
-            '';
-            defaultText = "None, you must set this yourself.";
-          };
-          PORT = lib.mkOption {
-            type = lib.types.port;
-            default = 8081;
-          };
-        };
-        exchangedb-postgres = {
-          CONFIG = lib.mkOption {
-            type = lib.types.str;
-            internal = true;
-            default = "postgres:///taler-exchange-httpd";
-          };
-        };
         # TODO into the libeufin.bank module
         libeufin-bank = {
           CURRENCY = lib.mkOption {

@@ -1,6 +1,7 @@
 {
   lib,
   config,
+  options,
   pkgs,
   ...
 }:
@@ -63,13 +64,57 @@ in
       '';
     };
     debug = lib.mkEnableOption "debug logging";
+    settings = lib.mkOption {
+      type = lib.types.submodule {
+        inherit (options.services.taler.settings.type.nestedTypes) freeformType;
+        options = {
+          # TODO do we want this to be a sub-attribute or only define the exchange set of options here
+          exchange = {
+            AML_THRESHOLD = lib.mkOption {
+              type = lib.types.str;
+              default = "${config.services.taler.settings.taler.CURRENCY}:1000000";
+              defaultText = "1000000 in {option}`CURRENCY`";
+            };
+            DB = lib.mkOption {
+              type = lib.types.str;
+              internal = true;
+              default = "postgres";
+            };
+            MASTER_PUBLIC_KEY = lib.mkOption {
+              type = lib.types.str;
+              # TODO link some sort of manual on how the master key works here
+              default = throw ''
+                You must provide `MASTER_PUBLIC_KEY` with the public part of your master key.
+
+                To generate this key, you must run `taler-exchange-offline setup`. It will print the public key.
+              '';
+              defaultText = "None, you must set this yourself.";
+            };
+            PORT = lib.mkOption {
+              type = lib.types.port;
+              default = 8081;
+            };
+          };
+          exchangedb-postgres = {
+            CONFIG = lib.mkOption {
+              type = lib.types.str;
+              internal = true;
+              default = "postgres:///taler-exchange-httpd";
+            };
+          };
+        };
+      };
+      default = { };
+    };
   };
 
   config = lib.mkIf this.enable {
-    services.taler.enable = this.enable;
-    services.taler.includes = [
-      (pkgs.writers.writeText "exchange-denominations.conf" this.denominationConfig)
-    ];
+    services.taler = {
+      inherit (this) enable settings;
+      includes = [
+        (pkgs.writers.writeText "exchange-denominations.conf" this.denominationConfig)
+      ];
+    };
 
     systemd.slices.taler-exchange = {
       description = "Slice for GNU taler exchange processes";
