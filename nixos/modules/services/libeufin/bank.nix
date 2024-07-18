@@ -5,20 +5,19 @@
   ...
 }:
 let
-  this = config.services.taler.libeufin.bank;
-  talerEnabled = config.services.taler.enable;
+  this = config.services.libeufin.bank;
   bankServiceName = "libeufin-bank";
-  inherit (config.services.taler) configFile;
+  inherit (config.services.taler) configFile; # TODO it should have its own config file
 in
 {
-  options.services.taler.libeufin.bank = {
+  options.services.libeufin.bank = {
     enable = lib.mkEnableOption "GNU Taler libeufin bank";
     package = lib.mkPackageOption pkgs "libeufin" { };
     debug = lib.mkEnableOption "debug logging";
     # TODO admin password option
   };
 
-  config = lib.mkIf (talerEnabled && this.enable) {
+  config = lib.mkIf this.enable {
     systemd.services = {
       ${bankServiceName} = {
         script =
@@ -47,6 +46,7 @@ in
       };
     };
 
+    services.taler.enable = true; # TODO it should have its own config file
     services.taler.settings.libeufin-bankdb-postgres.CONFIG = "postgresql:///${bankServiceName}";
 
     services.postgresql.enable = true;

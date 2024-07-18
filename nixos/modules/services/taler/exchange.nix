@@ -26,7 +26,6 @@ let
   # taler-exchange needs a runtime dir shared between the taler services. Crypto
   # helpers put their sockets here for instance and the httpd connects to them.
   runtimeDir = "/run/taler-system-runtime/";
-  talerEnabled = config.services.taler.enable;
   inherit (config.services.taler) configFile;
 in
 
@@ -66,7 +65,8 @@ in
     debug = lib.mkEnableOption "debug logging";
   };
 
-  config = lib.mkIf (talerEnabled && this.enable) {
+  config = lib.mkIf this.enable {
+    services.taler.enable = this.enable;
     services.taler.includes = [
       (pkgs.writers.writeText "exchange-denominations.conf" this.denominationConfig)
     ];
