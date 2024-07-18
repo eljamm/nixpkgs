@@ -1328,6 +1328,7 @@
   ./services/system/systemd-lock-handler.nix
   ./services/system/uptimed.nix
   ./services/system/zram-generator.nix
+  ./services/taler/exchange.nix
   ./services/taler/module.nix
   ./services/torrent/deluge.nix
   ./services/torrent/flexget.nix
