@@ -8,6 +8,7 @@
 let
   this = config.services.libeufin.bank;
   bankServiceName = "libeufin-bank";
+  dbinitServiceName = "libeufin-bank-dbinit";
   inherit (config.services.libeufin) configFile;
 in
 {
@@ -87,12 +88,11 @@ in
           DynamicUser = true;
           User = bankServiceName;
         };
-        requires = [ "libeufin-dbinit.service" ];
-        after = [ "libeufin-dbinit.service" ];
+        requires = [ "${dbinitServiceName}.service" ];
+        after = [ "${dbinitServiceName}.service" ];
         wantedBy = [ "multi-user.target" ]; # TODO slice?
       };
-      # TODO Is this idempotent?
-      libeufin-dbinit = {
+      ${dbinitServiceName} = {
         path = [ config.services.postgresql.package ];
         script =
           "${lib.getExe this.package} dbinit -c ${configFile}" + lib.optionalString this.debug " -L debug";
