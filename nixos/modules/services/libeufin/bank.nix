@@ -1,28 +1,88 @@
 {
   lib,
   config,
+  options,
   pkgs,
   ...
 }:
 let
   this = config.services.libeufin.bank;
   bankServiceName = "libeufin-bank";
-  inherit (config.services.taler) configFile; # TODO it should have its own config file
+  inherit (config.services.libeufin) configFile;
 in
 {
   options.services.libeufin.bank = {
-    enable = lib.mkEnableOption "GNU Taler libeufin bank";
+    enable = lib.mkEnableOption "libeufin core banking system and web interface";
     package = lib.mkPackageOption pkgs "libeufin" { };
     debug = lib.mkEnableOption "debug logging";
     # TODO admin password option
+
+    settings = lib.mkOption {
+      # TODO description
+      type = lib.types.submodule {
+        inherit (options.services.libeufin.settings.type.nestedTypes) freeformType;
+        options = {
+          libeufin-bank = {
+            CURRENCY = lib.mkOption {
+              type = lib.types.str;
+              default = "${config.services.taler.settings.taler.CURRENCY}";
+              defaultText = "{option}`services.taler.settings.taler.CURRENCY`";
+              description = ''
+                The currency under which the libeufin-bank should operate.
+
+                This defaults to the GNU taler module's currency for convenience
+                but if you run libeufin-bank separately from taler, you must set
+                this yourself.
+              '';
+            };
+            PORT = lib.mkOption {
+              type = lib.types.port;
+              default = 8082;
+              description = ''
+                The port on which libeufin-bank should listen.
+              '';
+            };
+            SUGGESTED_WITHDRAWAL_EXCHANGE = lib.mkOption {
+              type = lib.types.str;
+              default = "https://exchange.demo.taler.net/";
+              description = ''
+                Exchange that is suggested to wallets when withdrawing.
+
+                Note that, in order for withdrawals to work, your libeufin-bank
+                must be able to communicate with and send money etc. to the bank
+                at which the exchange used for withdrawals has its bank account.
+
+                If you also have your own bank and taler exchange network, you
+                probably want to set one of your exchange's url here instead of
+                the demo exchange.
+
+                This setting must always be set in order for the Android app to
+                not crash during the withdrawal process but the exchange to be
+                used can always be changed in the app.
+              '';
+            };
+          };
+          libeufin-bankdb-postgres = {
+            CONFIG = lib.mkOption {
+              type = lib.types.str;
+              internal = true;
+              default = "postgresql:///${bankServiceName}";
+            };
+          };
+        };
+      };
+    };
   };
 
   config = lib.mkIf this.enable {
+    services.libeufin = {
+      inherit (this) enable settings;
+    };
+
     systemd.services = {
       ${bankServiceName} = {
         script =
-          "${lib.getExe this.package} serve -c ${configFile}"
-          + lib.optionalString this.debug " -L debug";
+          "${lib.getExe this.package} serve -c ${configFile}" + lib.optionalString this.debug " -L debug";
         serviceConfig = {
           DynamicUser = true;
           User = bankServiceName;
@@ -31,11 +91,11 @@ in
         after = [ "libeufin-dbinit.service" ];
         wantedBy = [ "multi-user.target" ]; # TODO slice?
       };
+      # TODO Is this idempotent?
       libeufin-dbinit = {
         path = [ config.services.postgresql.package ];
         script =
-          "${lib.getExe this.package} dbinit -c ${configFile}"
-          + lib.optionalString this.debug " -L debug";
+          "${lib.getExe this.package} dbinit -c ${configFile}" + lib.optionalString this.debug " -L debug";
         serviceConfig = {
           Type = "oneshot";
           DynamicUser = true;
@@ -45,9 +105,6 @@ in
         after = [ "postgresql.service" ];
       };
     };
-
-    services.taler.enable = true; # TODO it should have its own config file
-    services.taler.settings.libeufin-bankdb-postgres.CONFIG = "postgresql:///${bankServiceName}";
 
     services.postgresql.enable = true;
     services.postgresql.ensureDatabases = [ bankServiceName ];
