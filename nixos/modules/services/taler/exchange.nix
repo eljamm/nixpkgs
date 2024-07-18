@@ -8,6 +8,7 @@
 let
   this = config.services.taler.exchange;
   # Services that need access to the DB
+  # https://docs.taler.net/taler-exchange-manual.html#services-users-groups-and-file-system-hierarchy
   servicesDB = [
     "httpd"
     "aggregator"
@@ -104,8 +105,9 @@ in
             let
               # Taken from https://docs.taler.net/taler-exchange-manual.html#exchange-database-setup
               # TODO generate these from servicesDB
+              # TODO Why does aggregator need DELETE?
               dbScript = pkgs.writers.writeText "taler-exchange-db-permissions.sql" ''
-                GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-aggregator";
+                GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-aggregator";
                 GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-closer";
                 GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-wirewatch";
                 GRANT USAGE ON SCHEMA exchange TO "taler-exchange-aggregator";
