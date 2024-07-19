@@ -110,6 +110,20 @@ in
       };
       default = { };
     };
+    enableAccounts = lib.mkOption {
+      type = lib.types.listOf lib.types.path;
+      # TODO improve this?
+      description = ''
+        This option enables the specified bank accounts and advertises them as
+        belonging to the exchange.
+
+        To do this, you must pass in each account signature, which you can get
+        by using the `taler-exchange-offline enable-account` command.
+
+        For more details on how to do this, please refer to [taler-exchange-offline(1)](https://docs.taler.net/manpages/taler-exchange-offline.1.html#create-signature-to-enable-bank-account-offline)
+      '';
+      default = [ ];
+    };
   };
 
   config = lib.mkIf this.enable {
@@ -172,6 +186,20 @@ in
             Type = "oneshot";
             DynamicUser = true;
             User = dbName;
+          };
+        };
+      }
+      // {
+        taler-exchange-accounts = {
+          script = lib.concatStringsSep "\n" (
+            map (account: "${this.package}/bin/taler-exchange-offline upload < ${account}") this.enableAccounts
+          );
+          requires = [ "taler-exchange-httpd.service" ];
+          after = [ "taler-exchange-httpd.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            DynamicUser = true;
+            User = "taler-exchange-accounts";
           };
         };
       };
