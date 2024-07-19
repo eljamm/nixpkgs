@@ -82,11 +82,11 @@ in
 
     systemd.services = {
       ${bankServiceName} = {
-        script =
-          "${lib.getExe this.package} serve -c ${configFile}" + lib.optionalString this.debug " -L debug";
         serviceConfig = {
           DynamicUser = true;
           User = bankServiceName;
+          ExecStart =
+            "${lib.getExe this.package} serve -c ${configFile}" + lib.optionalString this.debug " -L debug";
         };
         requires = [ "${dbinitServiceName}.service" ];
         after = [ "${dbinitServiceName}.service" ];
