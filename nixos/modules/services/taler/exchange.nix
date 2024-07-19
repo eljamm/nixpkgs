@@ -24,6 +24,7 @@ let
   ];
   services = servicesDB ++ servicesNoDB;
   dbName = "taler-exchange";
+  groupName = "taler-exchange-services";
   # taler-exchange needs a runtime dir shared between the taler services. Crypto
   # helpers put their sockets here for instance and the httpd connects to them.
   runtimeDir = "/run/taler-system-runtime/";
@@ -124,7 +125,7 @@ in
         serviceConfig = {
           DynamicUser = true;
           User = name;
-          Group = "taler-exchange"; # TODO refactor into constant
+          Group = groupName;
           ExecStart =
             "${this.package}/bin/${name} -c ${configFile}" + lib.optionalString this.debug " -L debug"; # TODO as a list?
           RuntimeDirectory = name;
@@ -175,13 +176,13 @@ in
         };
       };
 
-    users.groups.taler-exchange = { };
+    users.groups.${groupName} = { };
 
     systemd.tmpfiles.settings = {
       "10-taler-exchange" = {
         "${runtimeDir}" = {
           d = {
-            group = "taler-exchange";
+            group = groupName;
             user = "nobody";
             mode = "070";
           };
