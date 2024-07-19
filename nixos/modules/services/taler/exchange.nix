@@ -23,7 +23,7 @@ let
     "secmod-rsa"
   ];
   services = servicesDB ++ servicesNoDB;
-  dbName = "taler-exchange-httpd";
+  dbName = "taler-exchange";
   # taler-exchange needs a runtime dir shared between the taler services. Crypto
   # helpers put their sockets here for instance and the httpd connects to them.
   runtimeDir = "/run/taler-system-runtime/";
@@ -99,7 +99,7 @@ in
             CONFIG = lib.mkOption {
               type = lib.types.str;
               internal = true;
-              default = "postgres:///taler-exchange-httpd";
+              default = "postgres:///${dbName}";
             };
           };
         };
@@ -111,9 +111,7 @@ in
   config = lib.mkIf this.enable {
     services.taler = {
       inherit (this) enable settings;
-      includes = [
-        (pkgs.writers.writeText "exchange-denominations.conf" this.denominationConfig)
-      ];
+      includes = [ (pkgs.writers.writeText "exchange-denominations.conf" this.denominationConfig) ];
     };
 
     systemd.slices.taler-exchange = {
@@ -149,12 +147,14 @@ in
           script =
             let
               # Taken from https://docs.taler.net/taler-exchange-manual.html#exchange-database-setup
-              # TODO generate these from servicesDB
               # TODO Why does aggregator need DELETE?
               dbScript = pkgs.writers.writeText "taler-exchange-db-permissions.sql" ''
+                ALTER DATABASE "${dbName}" OWNER TO "taler-exchange-httpd";
+
                 GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-aggregator";
                 GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-closer";
                 GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-wirewatch";
+
                 GRANT USAGE ON SCHEMA exchange TO "taler-exchange-aggregator";
                 GRANT USAGE ON SCHEMA exchange TO "taler-exchange-closer";
                 GRANT USAGE ON SCHEMA exchange TO "taler-exchange-wirewatch";
@@ -169,10 +169,8 @@ in
           after = [ "postgresql.service" ];
           serviceConfig = {
             Type = "oneshot";
-            # RemainAfterExit = true;
-
             DynamicUser = true;
-            User = "taler-exchange-httpd";
+            User = dbName;
           };
         };
       };
@@ -196,8 +194,8 @@ in
       map (service: { name = "taler-exchange-${service}"; }) servicesDB
       ++ [
         {
-          name = "taler-exchange-httpd";
-          ensureDBOwnership = true; # TODO clean this up
+          name = dbName;
+          ensureDBOwnership = true;
         }
       ];
   };
