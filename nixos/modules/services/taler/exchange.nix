@@ -53,7 +53,7 @@ in
         RSA_KEYSIZE = 2048
         CIPHER = RSA
       '';
-      # TODO: why does the wallet not have a deployment subcommand when it should?
+      # TODO why does the wallet not have a deployment subcommand when it should?
       description = ''
         This option configures the cash denomination for the coins that the exchange offers.
         For more information, consult the docs: https://docs.taler.net/taler-exchange-manual.html#coins-denomination-keys
@@ -84,9 +84,11 @@ in
             };
             MASTER_PUBLIC_KEY = lib.mkOption {
               type = lib.types.str;
-              # TODO link some sort of manual on how the master key works here
               default = throw ''
                 You must provide `MASTER_PUBLIC_KEY` with the public part of your master key.
+
+                This will be used by the auditor service to get information about the exchange.
+                For more information, see https://docs.taler.net/taler-auditor-manual.html#initial-configuration
 
                 To generate this key, you must run `taler-exchange-offline setup`. It will print the public key.
               '';
@@ -128,7 +130,7 @@ in
           User = name;
           Group = groupName;
           ExecStart =
-            "${this.package}/bin/${name} -c ${configFile}" + lib.optionalString this.debug " -L debug"; # TODO as a list?
+            "${this.package}/bin/${name} -c ${configFile}" + lib.optionalString this.debug " -L debug";
           RuntimeDirectory = name;
           StateDirectory = name;
           CacheDirectory = name;

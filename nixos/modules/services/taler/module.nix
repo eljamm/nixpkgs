@@ -11,7 +11,7 @@ let
 in
 
 {
-  # turn this into a generic taler-like service thingy?
+  # TODO turn this into a generic taler-like service thingy?
   options.services.taler = {
     enable = lib.mkEnableOption "the GNU Taler system" // lib.mkOption { internal = true; };
     includes = lib.mkOption {
@@ -88,5 +88,5 @@ in
     };
   };
 
-  config = lib.mkIf (this.enable) { environment.etc."taler/taler.conf".source = this.configFile; };
+  config = lib.mkIf this.enable { environment.etc."taler/taler.conf".source = this.configFile; };
 }
