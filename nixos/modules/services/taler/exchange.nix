@@ -53,11 +53,12 @@ in
         RSA_KEYSIZE = 2048
         CIPHER = RSA
       '';
+      # TODO: why does the wallet not have a deployment subcommand when it should?
       description = ''
         This option configures the cash denomination for the coins that the exchange offers.
         For more information, consult the docs: https://docs.taler.net/taler-exchange-manual.html#coins-denomination-keys
 
-        You can either write these manually or you can use the `taler-wallet-cli deployment gen-coin-config`
+        You can either write these manually or you can use the `taler-harness deployment gen-coin-config`
         command to generate it.
 
         Warning: Do not modify existing denominations after deployment.
