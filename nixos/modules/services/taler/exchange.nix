@@ -23,7 +23,7 @@ let
     "secmod-rsa"
   ];
   services = servicesDB ++ servicesNoDB;
-  dbName = "taler-exchange";
+  dbName = "taler-exchange-httpd";
   groupName = "taler-exchange-services";
   # taler-exchange needs a runtime dir shared between the taler services. Crypto
   # helpers put their sockets here for instance and the httpd connects to them.
@@ -150,12 +150,9 @@ in
               # Taken from https://docs.taler.net/taler-exchange-manual.html#exchange-database-setup
               # TODO Why does aggregator need DELETE?
               dbScript = pkgs.writers.writeText "taler-exchange-db-permissions.sql" ''
-                ALTER DATABASE "${dbName}" OWNER TO "taler-exchange-httpd";
-
                 GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-aggregator";
                 GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-closer";
                 GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-wirewatch";
-
                 GRANT USAGE ON SCHEMA exchange TO "taler-exchange-aggregator";
                 GRANT USAGE ON SCHEMA exchange TO "taler-exchange-closer";
                 GRANT USAGE ON SCHEMA exchange TO "taler-exchange-wirewatch";
