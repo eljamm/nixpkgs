@@ -42,15 +42,16 @@ let
       mainProgram = "esbuild";
     };
   };
+  customPython = python3.withPackages (p: [ p.setuptools ]);
 in
 stdenv.mkDerivation rec {
   pname = "taler-wallet-core";
-  version = "0.11.2";
+  version = "0.12.5";
 
   src = fetchgit {
     url = "https://git.taler.net/wallet-core.git";
     rev = "v${version}";
-    hash = "sha256-GtR87XqmunYubh9EiY3bJIqXiXrT+re3KqWypYK3NCo=";
+    hash = "sha256-f1bRvZCFGsktydGF7kuKMr6gBxQQ7d71I6A3pVjdhIc=";
   };
 
   nativeBuildInputs = [
@@ -58,7 +59,7 @@ stdenv.mkDerivation rec {
     jq
     nodePackages.nodejs
     pnpm.configHook
-    python3
+    customPython
     zip
   ];
 
