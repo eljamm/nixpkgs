@@ -101,6 +101,7 @@ in
     };
 
     systemd.services =
+      # TODO: add `--auth` option for httpd service
       lib.genAttrs (map (n: "taler-merchant-${n}") services) (name: {
         # taler-merchant-depositcheck needs its executable is in the PATH
         # NOTE: Couldn't use `lib.getExe` to only get that single executable
