@@ -45,7 +45,7 @@ import ../make-test-python.nix (
                 # Allow creating new accounts and give new accounts a starting bonus
                 ALLOW_REGISTRATION = "yes";
                 REGISTRATION_BONUS_ENABLED = "yes";
-                REGISTRATION_BONUS = "KUDOS:100";
+                REGISTRATION_BONUS = "${CURRENCY}:100";
 
                 inherit CURRENCY;
               };
@@ -73,6 +73,9 @@ import ../make-test-python.nix (
         register_bank_account = pkgs.writeShellScript "register_bank_account" ''
           # Modified from taler-unified-setup.sh
           # https://git.taler.net/exchange.git/tree/src/testing/taler-unified-setup.sh?h=v0.11.2#n276
+
+          set -eux
+          echo "$@"
           if [ "$1" = "exchange" ] || [ "$1" = "Exchange" ]; then
               IS_EXCHANGE="true"
           else
@@ -82,7 +85,7 @@ import ../make-test-python.nix (
           if [ -n "$MAYBE_IBAN" ]; then
               ENAME=$(echo "$3" | sed -e "s/ /+/g")
               # Note: this assumes that $3 has no spaces. Should probably escape in the future..
-              PAYTO="payto://iban/SANDBOXX/''${MAYBE_IBAN}?receiver-name=$ENAME"
+              PAYTO="payto://iban/SANDBOXX/$MAYBE_IBAN?receiver-name=$ENAME"
               BODY='{"username":"'"$1"'","password":"'"$2"'","is_taler_exchange":'"$IS_EXCHANGE"',"name":"'"$3"'","payto_uri":"'"$PAYTO"'"}'
           else
               BODY='{"username":"'"$1"'","password":"'"$2"'","is_taler_exchange":'"$IS_EXCHANGE"',"name":"'"$3"'"}'
@@ -99,23 +102,45 @@ import ../make-test-python.nix (
             "http://localhost:${toString bankSettings.PORT}/accounts"
         '';
       in
+
+      # NOTE: for NeoVim formatting and highlights. Remove later.
+      # python
       ''
+        def systemd_run(machine, cmd):
+            machine.log(f"Executing command (via systemd-run): \"{cmd}\"")
+
+            (status, out) = machine.execute( " ".join([
+                "systemd-run",
+                "--service-type=exec",
+                "--quiet",
+                "--wait",
+                "-E PATH=\"$PATH\"",
+                "-p StandardOutput=journal",
+                "-p StandardError=journal",
+                "-p DynamicUser=yes",
+                "-p User=libeufin-bank",
+                f"$SHELL -c '{cmd}'"
+                ]) )
+
+            if status != 0:
+                raise Exception(f"systemd_run failed (status {status})")
+
+            machine.log("systemd-run finished successfully")
+
         start_all()
 
-        exchange.wait_for_unit("default.target")
         libeufin.wait_for_unit("default.target")
+        exchange.wait_for_unit("default.target")
 
         # Change password of admin account
-        libeufin.execute("libeufin-bank passwd -c ${bankConfig} ${AUSER} ${APASS}")
+        systemd_run(libeufin, "libeufin-bank passwd -c \"${bankConfig}\" \"${AUSER}\" \"${APASS}\"")
 
         # Increase debit amount of admin account
-        libeufin.execute("libeufin-bank edit-account -c ${bankConfig} --debit_threshold=\"${bankSettings.CURRENCY}:1000000\" ${AUSER}")
+        systemd_run(libeufin, "libeufin-bank edit-account -c ${bankConfig} --debit_threshold=\"${bankSettings.CURRENCY}:1000000\" ${AUSER}")
 
-        # Register bank accounts
-        libeufin.execute(
-          "${register_bank_account} testUser testUser \"User42\" FR7630006000011234567890189"
-          "${register_bank_account} exchange exchange \"Exchange Company\" DE989651"
-        )
+        # Register bank accounts (name and IBAN are hard-coded in the testing API)
+        libeufin.execute("${register_bank_account} testUser testUser \"User42\" FR7630006000011234567890189")
+        libeufin.execute("${register_bank_account} exchange exchange \"Exchange Company\" DE989651")
       '';
   }
 )
