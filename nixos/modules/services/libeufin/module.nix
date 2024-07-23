@@ -12,22 +12,18 @@ in
 
 {
   options.services.libeufin = {
-    enable = lib.mkEnableOption "the libeufin system" // lib.mkOption {
-      internal = true;
-    };
+    enable = lib.mkEnableOption "the libeufin system" // lib.mkOption { internal = true; };
     configFile = lib.mkOption {
       internal = true;
-      default = settingsFormat.generate "generated-taler.conf" this.settings;
+      default = settingsFormat.generate "generated-libeufin.conf" this.settings;
     };
     settings = lib.mkOption {
-      type = lib.types.submodule {
-        freeformType = settingsFormat.type;
-      };
+      type = lib.types.submodule { freeformType = settingsFormat.type; };
       default = { };
     };
   };
 
-  config = lib.mkIf (this.enable) {
+  config = lib.mkIf this.enable {
     environment.etc."libeufin/libeufin.conf".source = this.configFile;
   };
 }
