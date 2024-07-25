@@ -46,12 +46,12 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "taler-wallet-core";
-  version = "0.12.5";
+  version = "0.12.6";
 
   src = fetchgit {
     url = "https://git.taler.net/wallet-core.git";
     rev = "v${version}";
-    hash = "sha256-f1bRvZCFGsktydGF7kuKMr6gBxQQ7d71I6A3pVjdhIc=";
+    hash = "sha256-gZfXzw3B1Ei2F5o07bpPm6o2alcZ41R6OyhSpew0eTA=";
   };
 
   nativeBuildInputs = [
