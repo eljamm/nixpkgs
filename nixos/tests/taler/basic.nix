@@ -56,6 +56,12 @@ import ../make-test-python.nix (
             config.services.libeufin.bank.package
           ];
         };
+
+      client =
+        { pkgs, lib, ... }:
+        {
+          environment.systemPackages = [ pkgs.taler-wallet-core ];
+        };
     };
 
     testScript =
@@ -111,6 +117,8 @@ import ../make-test-python.nix (
       # NOTE: for NeoVim formatting and highlights. Remove later.
       # python
       ''
+        import json
+
         def systemd_run(machine, cmd):
             machine.log(f"Executing command (via systemd-run): \"{cmd}\"")
 
@@ -158,6 +166,16 @@ import ../make-test-python.nix (
             name = "Exchange Company";
           }
         }")
+
+        # Make a withdrawal
+        client.wait_until_succeeds("taler-wallet-cli exchanges add http://exchange:8081/")
+        client.execute("taler-wallet-cli exchanges accept-tos http://exchange:8081/")
+        withdrawal = json.loads(
+            client.succeed("curl http://bank:8082/accounts/${TUSER}/withdrawals --basic -u ${TUSER}:${TPASS} -X POST -H 'Content-Type: application/json' --data '{\"amount\": \"${CURRENCY}:25\"}'")
+        )
+        client.execute(f"taler-wallet-cli withdraw accept-uri {withdrawal["taler_withdraw_uri"]} --exchange http://exchange:8081/")
+        client.execute(f"curl -sSfL -X POST -H 'Content-Type: application/json' 'http://bank:8082/accounts/user/withdrawals/{withdrawal["withdrawal_id"]}/confirm'")
+        client.execute("taler-wallet-cli run-until-done")
       '';
   }
 )
