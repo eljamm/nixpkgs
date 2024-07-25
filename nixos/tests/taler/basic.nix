@@ -1,5 +1,5 @@
 import ../make-test-python.nix (
-  { pkgs, ... }:
+  { pkgs, lib, ... }:
   let
     CURRENCY = "KUDOS";
   in
@@ -38,7 +38,7 @@ import ../make-test-python.nix (
             debug = true;
             settings = {
               libeufin-bank = {
-                SUGGESTED_WITHDRAWAL_EXCHANGE = "http://localhost:8081";
+                # SUGGESTED_WITHDRAWAL_EXCHANGE = "http://localhost:8081";
                 WIRE_TYPE = "iban";
                 IBAN_PAYTO_BIC = "SANDBOXX";
 
@@ -70,37 +70,44 @@ import ../make-test-python.nix (
         AUSER = "admin";
         APASS = "admin";
 
-        register_bank_account = pkgs.writeShellScript "register_bank_account" ''
-          # Modified from taler-unified-setup.sh
-          # https://git.taler.net/exchange.git/tree/src/testing/taler-unified-setup.sh?h=v0.11.2#n276
+        register_bank_account =
+          {
+            username,
+            password,
+            name,
+            iban ? null,
+          }:
+          let
+            is_taler_exchange = lib.toLower username == "exchange";
+            BODY =
+              {
+                inherit
+                  username
+                  password
+                  name
+                  is_taler_exchange
+                  ;
+              }
+              // lib.optionalAttrs is_taler_exchange {
+                PAYTO = "payto://iban/SANDBOXX/${iban}?receiver-name=${name}";
+              };
+          in
+          pkgs.writeShellScript "register_bank_account" ''
+            # Modified from taler-unified-setup.sh
+            # https://git.taler.net/exchange.git/tree/src/testing/taler-unified-setup.sh?h=v0.11.2#n276
 
-          set -eux
-          echo "$@"
-          if [ "$1" = "exchange" ] || [ "$1" = "Exchange" ]; then
-              IS_EXCHANGE="true"
-          else
-              IS_EXCHANGE="false"
-          fi
-          MAYBE_IBAN="''${4:-}"
-          if [ -n "$MAYBE_IBAN" ]; then
-              ENAME=$(echo "$3" | sed -e "s/ /+/g")
-              # Note: this assumes that $3 has no spaces. Should probably escape in the future..
-              PAYTO="payto://iban/SANDBOXX/$MAYBE_IBAN?receiver-name=$ENAME"
-              BODY='{"username":"'"$1"'","password":"'"$2"'","is_taler_exchange":'"$IS_EXCHANGE"',"name":"'"$3"'","payto_uri":"'"$PAYTO"'"}'
-          else
-              BODY='{"username":"'"$1"'","password":"'"$2"'","is_taler_exchange":'"$IS_EXCHANGE"',"name":"'"$3"'"}'
-          fi
-          wget \
-            --http-user="${AUSER}" \
-            --http-password="${APASS}" \
-            --method=POST \
-            --header='Content-type: application/json' \
-            --body-data="$BODY" \
-            -o /dev/null \
-            -O /dev/null \
-            -a wget-register-account.log \
-            "http://localhost:${toString bankSettings.PORT}/accounts"
-        '';
+            set -eux
+            wget \
+              --http-user=${AUSER} \
+              --http-password=${APASS} \
+              --method=POST \
+              --header='Content-type: application/json' \
+              --body-data=${lib.escapeShellArg (lib.strings.toJSON BODY)} \
+              -o /dev/null \
+              -O /dev/null \
+              -a wget-register-account.log \
+              "http://libeufin:${toString bankSettings.PORT}/accounts"
+          '';
       in
 
       # NOTE: for NeoVim formatting and highlights. Remove later.
@@ -139,8 +146,22 @@ import ../make-test-python.nix (
         systemd_run(libeufin, "libeufin-bank edit-account -c ${bankConfig} --debit_threshold=\"${bankSettings.CURRENCY}:1000000\" ${AUSER}")
 
         # Register bank accounts (name and IBAN are hard-coded in the testing API)
-        libeufin.execute("${register_bank_account} testUser testUser \"User42\" FR7630006000011234567890189")
-        libeufin.execute("${register_bank_account} exchange exchange \"Exchange Company\" DE989651")
+        libeufin.execute("${
+          register_bank_account {
+            username = "testUser";
+            password = "testUser";
+            name = "User42";
+            iban = "FR7630006000011234567890189";
+          }
+        }")
+        libeufin.execute("${
+          register_bank_account {
+            username = "exchange";
+            password = "exchange";
+            name = "Exchange Company";
+            iban = "DE989651";
+          }
+        }")
       '';
   }
 )
