@@ -38,9 +38,9 @@ import ../make-test-python.nix (
             debug = true;
             settings = {
               libeufin-bank = {
-                # SUGGESTED_WITHDRAWAL_EXCHANGE = "http://localhost:8081";
-                WIRE_TYPE = "iban";
-                IBAN_PAYTO_BIC = "SANDBOXX";
+                # SUGGESTED_WITHDRAWAL_EXCHANGE = "http://exchange:8081";
+                WIRE_TYPE = "x-taler-bank";
+                X_TALER_BANK_PAYTO_HOSTNAME = "http://bank:8082/";
 
                 # Allow creating new accounts and give new accounts a starting bonus
                 ALLOW_REGISTRATION = "yes";
@@ -70,27 +70,25 @@ import ../make-test-python.nix (
         AUSER = "admin";
         APASS = "admin";
 
+        TUSER = "testUser";
+        TPASS = "testUser";
+
         register_bank_account =
           {
             username,
             password,
             name,
-            iban ? null,
           }:
           let
             is_taler_exchange = lib.toLower username == "exchange";
-            BODY =
-              {
-                inherit
-                  username
-                  password
-                  name
-                  is_taler_exchange
-                  ;
-              }
-              // lib.optionalAttrs is_taler_exchange {
-                PAYTO = "payto://iban/SANDBOXX/${iban}?receiver-name=${name}";
-              };
+            BODY = {
+              inherit
+                username
+                password
+                name
+                is_taler_exchange
+                ;
+            };
           in
           pkgs.writeShellScript "register_bank_account" ''
             # Modified from taler-unified-setup.sh
@@ -148,10 +146,9 @@ import ../make-test-python.nix (
         # Register bank accounts (name and IBAN are hard-coded in the testing API)
         bank.execute("${
           register_bank_account {
-            username = "testUser";
-            password = "testUser";
+            username = "${TUSER}";
+            password = "${TPASS}";
             name = "User42";
-            iban = "FR7630006000011234567890189";
           }
         }")
         bank.execute("${
@@ -159,7 +156,6 @@ import ../make-test-python.nix (
             username = "exchange";
             password = "exchange";
             name = "Exchange Company";
-            iban = "DE989651";
           }
         }")
       '';
