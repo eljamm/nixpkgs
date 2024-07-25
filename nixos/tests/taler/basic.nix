@@ -30,7 +30,7 @@ import ../make-test-python.nix (
           };
         };
 
-      libeufin =
+      bank =
         { pkgs, config, ... }:
         {
           services.libeufin.bank = {
@@ -61,10 +61,10 @@ import ../make-test-python.nix (
     testScript =
       { nodes, ... }:
       let
-        bankConfig = toString nodes.libeufin.services.libeufin.configFile.outPath;
+        bankConfig = toString nodes.bank.services.libeufin.configFile.outPath;
         talerConfig = toString nodes.exchange.services.taler.configFile.outPath;
 
-        bankSettings = nodes.libeufin.services.libeufin.settings.libeufin-bank;
+        bankSettings = nodes.bank.services.libeufin.settings.libeufin-bank;
 
         # Bank admin account credentials
         AUSER = "admin";
@@ -106,7 +106,7 @@ import ../make-test-python.nix (
               -o /dev/null \
               -O /dev/null \
               -a wget-register-account.log \
-              "http://libeufin:${toString bankSettings.PORT}/accounts"
+              "http://bank:${toString bankSettings.PORT}/accounts"
           '';
       in
 
@@ -136,17 +136,17 @@ import ../make-test-python.nix (
 
         start_all()
 
-        libeufin.wait_for_unit("default.target")
+        bank.wait_for_unit("default.target")
         exchange.wait_for_unit("default.target")
 
         # Change password of admin account
-        systemd_run(libeufin, "libeufin-bank passwd -c \"${bankConfig}\" \"${AUSER}\" \"${APASS}\"")
+        systemd_run(bank, "libeufin-bank passwd -c \"${bankConfig}\" \"${AUSER}\" \"${APASS}\"")
 
         # Increase debit amount of admin account
-        systemd_run(libeufin, "libeufin-bank edit-account -c ${bankConfig} --debit_threshold=\"${bankSettings.CURRENCY}:1000000\" ${AUSER}")
+        systemd_run(bank, "libeufin-bank edit-account -c ${bankConfig} --debit_threshold=\"${bankSettings.CURRENCY}:1000000\" ${AUSER}")
 
         # Register bank accounts (name and IBAN are hard-coded in the testing API)
-        libeufin.execute("${
+        bank.execute("${
           register_bank_account {
             username = "testUser";
             password = "testUser";
@@ -154,7 +154,7 @@ import ../make-test-python.nix (
             iban = "FR7630006000011234567890189";
           }
         }")
-        libeufin.execute("${
+        bank.execute("${
           register_bank_account {
             username = "exchange";
             password = "exchange";
