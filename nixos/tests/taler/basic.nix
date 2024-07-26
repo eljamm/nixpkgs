@@ -22,7 +22,7 @@ import ../make-test-python.nix (
               enable = true;
               debug = true;
               denominationConfig = lib.readFile ./conf/taler-denominations.conf;
-              enableAccounts = [ ./testUser.json ];
+              enableAccounts = [ ./exchange-account.json ];
               settings.exchange = {
                 MASTER_PUBLIC_KEY = "2TQSTPFZBC2MC4E52NHPA050YXYG02VC3AB50QESM6JX1QJEYVQ0";
               };
