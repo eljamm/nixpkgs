@@ -26,8 +26,12 @@ import ../make-test-python.nix (
               settings.exchange = {
                 MASTER_PUBLIC_KEY = "2TQSTPFZBC2MC4E52NHPA050YXYG02VC3AB50QESM6JX1QJEYVQ0";
               };
+              settings.exchange-offline = {
+                MASTER_PRIV_FILE = "${./master.priv}";
+              };
             };
           };
+          environment.systemPackages = [ config.services.taler.exchange.package ];
         };
 
       bank =
@@ -145,6 +149,10 @@ import ../make-test-python.nix (
 
         bank.wait_for_unit("default.target")
         exchange.wait_for_unit("default.target")
+
+        # Enable exchange wire account
+        exchange.wait_until_succeeds("taler-exchange-offline download sign upload")
+        exchange.succeed("taler-exchange-offline enable-account \"payto://x-taler-bank/exchange:8081/exchange?receiver-name=exchange\" upload")
 
         # Change password of admin account
         systemd_run(bank, "libeufin-bank passwd -c \"${bankConfig}\" \"${AUSER}\" \"${APASS}\"", "libeufin-bank")
