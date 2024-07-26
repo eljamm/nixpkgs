@@ -11,7 +11,7 @@ import ../make-test-python.nix (
 
     nodes = {
       exchange =
-        { pkgs, lib, ... }:
+        { config, lib, ... }:
         {
           services.taler = {
             settings = {
@@ -25,17 +25,19 @@ import ../make-test-python.nix (
               enableAccounts = [ ./exchange-account.json ];
               settings.exchange = {
                 MASTER_PUBLIC_KEY = "2TQSTPFZBC2MC4E52NHPA050YXYG02VC3AB50QESM6JX1QJEYVQ0";
+                BASE_URL = "http://exchange:8081/";
               };
               settings.exchange-offline = {
                 MASTER_PRIV_FILE = "${./master.priv}";
               };
             };
           };
+          networking.firewall.enable = false;
           environment.systemPackages = [ config.services.taler.exchange.package ];
         };
 
       bank =
-        { pkgs, config, ... }:
+        { config, pkgs, ... }:
         {
           services.libeufin.bank = {
             enable = true;
@@ -55,6 +57,7 @@ import ../make-test-python.nix (
               };
             };
           };
+          networking.firewall.enable = false;
           environment.systemPackages = [
             pkgs.wget
             config.services.libeufin.bank.package
@@ -62,8 +65,9 @@ import ../make-test-python.nix (
         };
 
       client =
-        { pkgs, lib, ... }:
+        { pkgs, ... }:
         {
+          networking.firewall.enable = false;
           environment.systemPackages = [ pkgs.taler-wallet-core ];
         };
     };
@@ -145,10 +149,14 @@ import ../make-test-python.nix (
 
             machine.log("systemd-run finished successfully")
 
-        start_all()
+        bank.start()
+        exchange.start()
 
         bank.wait_for_unit("default.target")
         exchange.wait_for_unit("default.target")
+
+        bank.wait_for_open_port(8082)
+        exchange.wait_for_open_port(8081)
 
         # Enable exchange wire account
         exchange.wait_until_succeeds("taler-exchange-offline download sign upload")
@@ -160,15 +168,17 @@ import ../make-test-python.nix (
         # Increase debit amount of admin account
         systemd_run(bank, "libeufin-bank edit-account -c ${bankConfig} --debit_threshold=\"${bankSettings.CURRENCY}:1000000\" ${AUSER}", "libeufin-bank")
 
+        bank.succeed("curl http://exchange:8081/")
+
         # Register bank accounts (name and IBAN are hard-coded in the testing API)
-        bank.execute("${
+        bank.succeed("${
           register_bank_account {
             username = "${TUSER}";
             password = "${TPASS}";
             name = "User42";
           }
         }")
-        bank.execute("${
+        bank.succeed("${
           register_bank_account {
             username = "exchange";
             password = "exchange";
@@ -176,15 +186,23 @@ import ../make-test-python.nix (
           }
         }")
 
+        client.start()
+        client.wait_for_unit("default.target")
+
+        client.succeed("curl -s http://exchange:8081/keys")
+
         # Make a withdrawal
-        client.wait_until_succeeds("taler-wallet-cli exchanges add http://exchange:8081/")
-        client.execute("taler-wallet-cli exchanges accept-tos http://exchange:8081/")
+        client.succeed("taler-wallet-cli exchanges add http://exchange:8081/")
+        # client.succeed("taler-wallet-cli exchanges list")
+        client.succeed("taler-wallet-cli exchanges accept-tos http://exchange:8081/")
+        # client.succeed("taler-wallet-cli exchanges list")
         withdrawal = json.loads(
-            client.succeed("curl http://bank:8082/accounts/${TUSER}/withdrawals --basic -u ${TUSER}:${TPASS} -X POST -H 'Content-Type: application/json' --data '{\"amount\": \"${CURRENCY}:25\"}'")
+            client.succeed("curl -sSfL http://bank:8082/accounts/${TUSER}/withdrawals --basic -u ${TUSER}:${TPASS} -X POST -H 'Content-Type: application/json' --data '{\"amount\": \"${CURRENCY}:25\"}'")
         )
-        client.execute(f"taler-wallet-cli withdraw accept-uri {withdrawal["taler_withdraw_uri"]} --exchange http://exchange:8081/")
-        client.execute(f"curl -sSfL -X POST -H 'Content-Type: application/json' 'http://bank:8082/accounts/user/withdrawals/{withdrawal["withdrawal_id"]}/confirm'")
-        client.execute("taler-wallet-cli run-until-done")
+        client.succeed(f"taler-wallet-cli withdraw accept-uri {withdrawal["taler_withdraw_uri"]} --exchange http://exchange:8081/")
+        client.execute(f"curl -sSfL -X POST --basic -u ${TUSER}:${TPASS} -H 'Content-Type: application/json' 'http://bank:8082/accounts/${TUSER}/withdrawals/{withdrawal["withdrawal_id"]}/confirm'")
+        client.succeed("taler-wallet-cli run-until-done")
+        client.succeed("taler-wallet-cli balance")
       '';
   }
 )
