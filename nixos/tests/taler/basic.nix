@@ -119,7 +119,7 @@ import ../make-test-python.nix (
       ''
         import json
 
-        def systemd_run(machine, cmd):
+        def systemd_run(machine, cmd, user="nobody", group="nobody"):
             machine.log(f"Executing command (via systemd-run): \"{cmd}\"")
 
             (status, out) = machine.execute( " ".join([
@@ -131,7 +131,8 @@ import ../make-test-python.nix (
                 "-p StandardOutput=journal",
                 "-p StandardError=journal",
                 "-p DynamicUser=yes",
-                "-p User=libeufin-bank",
+                f"-p Group={group}" if group != "nobody" else "",
+                f"-p User={user}" if user != "nobody" else "",
                 f"$SHELL -c '{cmd}'"
                 ]) )
 
@@ -146,10 +147,10 @@ import ../make-test-python.nix (
         exchange.wait_for_unit("default.target")
 
         # Change password of admin account
-        systemd_run(bank, "libeufin-bank passwd -c \"${bankConfig}\" \"${AUSER}\" \"${APASS}\"")
+        systemd_run(bank, "libeufin-bank passwd -c \"${bankConfig}\" \"${AUSER}\" \"${APASS}\"", "libeufin-bank")
 
         # Increase debit amount of admin account
-        systemd_run(bank, "libeufin-bank edit-account -c ${bankConfig} --debit_threshold=\"${bankSettings.CURRENCY}:1000000\" ${AUSER}")
+        systemd_run(bank, "libeufin-bank edit-account -c ${bankConfig} --debit_threshold=\"${bankSettings.CURRENCY}:1000000\" ${AUSER}", "libeufin-bank")
 
         # Register bank accounts (name and IBAN are hard-coded in the testing API)
         bank.execute("${
