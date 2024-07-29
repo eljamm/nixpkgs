@@ -195,12 +195,18 @@ import ../make-test-python.nix (
         client.succeed("curl -s http://exchange:8081/keys")
 
         with subtest("Make a withdrawal from the CLI wallet"):
-            # Wallet: add exchange
-            client.succeed("taler-wallet-cli exchanges add http://exchange:8081/")
-            client.succeed("taler-wallet-cli exchanges accept-tos http://exchange:8081/")
-            # client.succeed("taler-wallet-cli exchanges list")
+            balanceWanted = "${CURRENCY}:25"
 
-            # Wallet: request a withdrawal from the bank
+            # Wallet wrapper
+            def wallet_cli(command):
+                return client.succeed("taler-wallet-cli --skip-defaults --no-throttle " + command)
+
+            # Register exchange
+            with subtest("Register exchange"):
+                wallet_cli("exchanges add http://exchange:8081/")
+                wallet_cli("exchanges accept-tos http://exchange:8081/")
+
+            # Request withdrawal from the bank
             withdrawal = json.loads(
                 client.succeed("curl -sSfL http://bank:8082/accounts/${TUSER}/withdrawals --basic -u ${TUSER}:${TPASS} -X POST -H 'Content-Type: application/json' --data '{\"amount\": \"${CURRENCY}:25\"}'")
             )
@@ -210,10 +216,23 @@ import ../make-test-python.nix (
             # Bank: confirm withdrawal
             client.execute(f"curl -sSfL -X POST --basic -u ${TUSER}:${TPASS} -H 'Content-Type: application/json' 'http://bank:8082/accounts/${TUSER}/withdrawals/{withdrawal["withdrawal_id"]}/confirm'")
 
-            # Wallet: process transactions
-            client.succeed("taler-wallet-cli run-until-done")
-            # Wallet: list balance
-            client.succeed("taler-wallet-cli balance")
+            # Process transactions
+            wallet_cli("run-until-done")
+
+            # Verify balance
+            with subtest("Verify balance"):
+                # Safely read the balance
+                balance = wallet_cli("balance --json")
+                try:
+                    balanceGot = json.loads(balance)["balances"][0]["available"]
+                except:
+                    balanceGot = "${CURRENCY}:0"
+
+                # Compare balance with expected value
+                if balanceGot != balanceWanted:
+                    client.fail(f'echo Wanted balance: "{balanceWanted}", got: "{balanceGot}"')
+                else:
+                    client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
       '';
   }
 )
