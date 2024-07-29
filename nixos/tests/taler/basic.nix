@@ -127,6 +127,11 @@ import ../make-test-python.nix (
       ''
         import json
 
+        # Join curl commands
+        def curl(machine, commands):
+            return machine.succeed(" ".join(commands))
+
+        # Execute command as systemd DynamicUser
         def systemd_run(machine, cmd, user="nobody", group="nobody"):
             machine.log(f"Executing command (via systemd-run): \"{cmd}\"")
 
@@ -149,27 +154,32 @@ import ../make-test-python.nix (
 
             machine.log("systemd-run finished successfully")
 
-        bank.start()
-        exchange.start()
+        start_all()
 
-        bank.wait_for_unit("default.target")
-        exchange.wait_for_unit("default.target")
+        # Wait for services
+        bank.wait_for_unit("libeufin-bank.service")
+        exchange.wait_for_unit("taler-exchange-httpd.service")
 
         bank.wait_for_open_port(8082)
         exchange.wait_for_open_port(8081)
 
+        # Enable exchange wire account
         with subtest("Enable exchange wire account"):
             exchange.wait_until_succeeds("taler-exchange-offline download sign upload")
             exchange.succeed("taler-exchange-offline enable-account \"payto://x-taler-bank/exchange:8081/exchange?receiver-name=exchange\" upload")
 
+        # Modify bank's admin account
         with subtest("Modify bank's admin account"):
             # Change password
             systemd_run(bank, "libeufin-bank passwd -c \"${bankConfig}\" \"${AUSER}\" \"${APASS}\"", "libeufin-bank")
+
             # Increase debit amount
             systemd_run(bank, "libeufin-bank edit-account -c ${bankConfig} --debit_threshold=\"${bankSettings.CURRENCY}:1000000\" ${AUSER}", "libeufin-bank")
 
-        bank.succeed("curl http://exchange:8081/")
+        # Check that bank can connect to exchange
+        bank.succeed("curl -s http://exchange:8081/")
 
+        # Register bank accounts
         with subtest("Register bank accounts"):
         # NOTE: using hard-coded values from the testing API
         # TODO: add link to testing API
@@ -188,18 +198,21 @@ import ../make-test-python.nix (
               }
             }")
 
-        client.start()
-        client.wait_for_unit("default.target")
+        # Check that client can connect to exchange
+        client.succeed("curl -s http://exchange:8081/")
 
-        # Check if client can connect to exchange successfully
-        client.succeed("curl -s http://exchange:8081/keys")
-
+        # Make a withdrawal from the CLI wallet
         with subtest("Make a withdrawal from the CLI wallet"):
             balanceWanted = "${CURRENCY}:25"
 
             # Wallet wrapper
             def wallet_cli(command):
-                return client.succeed("taler-wallet-cli --skip-defaults --no-throttle " + command)
+                return client.succeed(
+                    "taler-wallet-cli "
+                    "--skip-defaults "  # skip configuring default exchanges # NOTE: does this not work?
+                    "--no-throttle "    # don't do any request throttling    # TODO: see if this affects test speed
+                    + command
+                )
 
             # Register exchange
             with subtest("Register exchange"):
@@ -208,13 +221,24 @@ import ../make-test-python.nix (
 
             # Request withdrawal from the bank
             withdrawal = json.loads(
-                client.succeed("curl -sSfL http://bank:8082/accounts/${TUSER}/withdrawals --basic -u ${TUSER}:${TPASS} -X POST -H 'Content-Type: application/json' --data '{\"amount\": \"${CURRENCY}:25\"}'")
+                curl(client, [
+                    "curl -X POST",
+                    "-u ${TUSER}:${TPASS}",
+                    "-H 'Content-Type: application/json'",
+                    f"--data '{{\"amount\": \"{balanceWanted}\"}}'", # double brackets escapes them
+                    "-sSfL 'http://bank:8082/accounts/${TUSER}/withdrawals'"
+                ])
             )
 
-            # Wallet: accept withdrawal URI
-            client.succeed(f"taler-wallet-cli withdraw accept-uri {withdrawal["taler_withdraw_uri"]} --exchange http://exchange:8081/")
-            # Bank: confirm withdrawal
-            client.execute(f"curl -sSfL -X POST --basic -u ${TUSER}:${TPASS} -H 'Content-Type: application/json' 'http://bank:8082/accounts/${TUSER}/withdrawals/{withdrawal["withdrawal_id"]}/confirm'")
+            # Accept & conform withdrawal
+            with subtest("Accept & conform withdrawal"):
+                wallet_cli(f"withdraw accept-uri {withdrawal["taler_withdraw_uri"]} --exchange http://exchange:8081/")
+                curl(client, [
+                    "curl -X POST",
+                    "-u ${TUSER}:${TPASS}",
+                    "-H 'Content-Type: application/json'",
+                    f"-sSfL 'http://bank:8082/accounts/${TUSER}/withdrawals/{withdrawal["withdrawal_id"]}/confirm'"
+                ])
 
             # Process transactions
             wallet_cli("run-until-done")
