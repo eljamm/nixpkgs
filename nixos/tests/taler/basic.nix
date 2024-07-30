@@ -39,21 +39,38 @@ import ../make-test-python.nix (
       bank =
         { config, pkgs, ... }:
         {
-          services.libeufin.bank = {
-            enable = true;
-            debug = true;
-            settings = {
-              libeufin-bank = {
-                # SUGGESTED_WITHDRAWAL_EXCHANGE = "http://exchange:8081";
-                WIRE_TYPE = "x-taler-bank";
-                X_TALER_BANK_PAYTO_HOSTNAME = "http://bank:8082/";
+          services.libeufin = {
+            bank = {
+              enable = true;
+              debug = true;
+              settings = {
+                libeufin-bank = {
+                  # SUGGESTED_WITHDRAWAL_EXCHANGE = "http://exchange:8081";
+                  WIRE_TYPE = "x-taler-bank";
+                  X_TALER_BANK_PAYTO_HOSTNAME = "http://bank:8082/";
 
-                # Allow creating new accounts and give new accounts a starting bonus
-                ALLOW_REGISTRATION = "yes";
-                REGISTRATION_BONUS_ENABLED = "yes";
-                REGISTRATION_BONUS = "${CURRENCY}:100";
+                  # Allow creating new accounts
+                  ALLOW_REGISTRATION = "yes";
 
-                inherit CURRENCY;
+                  # A registration bonus makes withdrawals easier since the
+                  # bank account balance is not empty
+                  REGISTRATION_BONUS_ENABLED = "yes";
+                  REGISTRATION_BONUS = "${CURRENCY}:100";
+
+                  inherit CURRENCY;
+                };
+              };
+            };
+            nexus = {
+              enable = true;
+              debug = true;
+              settings = {
+                nexus-ebics = {
+                  HOST_BASE_URL = "http://bank:8082/";
+
+                  inherit CURRENCY;
+                };
+                libeufin-nexusdb-postgres.CONFIG = "postgresql:///libeufin-nexus";
               };
             };
           };
