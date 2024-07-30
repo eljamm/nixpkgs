@@ -78,7 +78,31 @@ import ../make-test-python.nix (
           environment.systemPackages = [
             pkgs.wget
             config.services.libeufin.bank.package
+            # TODO: remove
+            pkgs.neovim
+            pkgs.zellij
           ];
+          # TODO: for debugging. remove later
+          virtualisation.forwardPorts = [
+            {
+              from = "host";
+              host.port = 4444; # socat
+              guest.port = 22;
+            }
+            {
+              from = "host";
+              host.port = 2222; # ssh
+              guest.port = 22;
+            }
+          ];
+          services.openssh = {
+            enable = true;
+            settings = {
+              PermitRootLogin = "yes";
+              PermitEmptyPasswords = "yes";
+            };
+          };
+          security.pam.services.sshd.allowNullPassword = true;
         };
 
       client =
