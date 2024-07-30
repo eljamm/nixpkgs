@@ -207,15 +207,15 @@ import ../make-test-python.nix (
         # Enable exchange wire account
         with subtest("Enable exchange wire account"):
             exchange.wait_until_succeeds("taler-exchange-offline download sign upload")
-            exchange.succeed("taler-exchange-offline enable-account \"payto://x-taler-bank/exchange:8081/exchange?receiver-name=exchange\" upload")
+            exchange.succeed('taler-exchange-offline enable-account "payto://x-taler-bank/exchange:8081/exchange?receiver-name=exchange" upload')
 
         # Modify bank's admin account
         with subtest("Modify bank's admin account"):
             # Change password
-            systemd_run(bank, "libeufin-bank passwd -c \"${bankConfig}\" \"${AUSER}\" \"${APASS}\"", "libeufin-bank")
+            systemd_run(bank, 'libeufin-bank passwd -c "${bankConfig}" "${AUSER}" "${APASS}"', "libeufin-bank")
 
             # Increase debit amount
-            systemd_run(bank, "libeufin-bank edit-account -c ${bankConfig} --debit_threshold=\"${bankSettings.CURRENCY}:1000000\" ${AUSER}", "libeufin-bank")
+            systemd_run(bank, 'libeufin-bank edit-account -c ${bankConfig} --debit_threshold="${bankSettings.CURRENCY}:1000000" ${AUSER}', "libeufin-bank")
 
         # Check that bank can connect to exchange
         bank.succeed("curl -s http://exchange:8081/")
@@ -266,7 +266,7 @@ import ../make-test-python.nix (
                     "curl -X POST",
                     "-u ${TUSER}:${TPASS}",
                     "-H 'Content-Type: application/json'",
-                    f"--data '{{\"amount\": \"{balanceWanted}\"}}'", # double brackets escapes them
+                    f"""--data '{{"amount": "{balanceWanted}"}}'""", # double brackets escapes them
                     "-sSfL 'http://bank:8082/accounts/${TUSER}/withdrawals'"
                 ])
             )
