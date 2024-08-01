@@ -65,7 +65,7 @@ stdenv.mkDerivation rec {
 
   pnpmDeps = pnpm.fetchDeps {
     inherit pname version src;
-    hash = "sha256-RdG/QnZNIvQIMU7ScSFz2OfbctHBr65GWXLPvVaybfQ=";
+    hash = "sha256-OwZLRv2ZWJ01pHWS+CGxvM4J19tGnEsRJ9S3bcsaWSE=";
   };
 
   buildInputs = [ nodePackages.nodejs ];
