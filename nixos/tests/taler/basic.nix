@@ -66,9 +66,21 @@ import ../make-test-python.nix (
               debug = true;
               settings = {
                 nexus-ebics = {
-                  HOST_BASE_URL = "http://bank:8082/";
+                  CURRENCY = "CHF";
 
-                  inherit CURRENCY;
+                  # Bank
+                  HOST_BASE_URL = "http://bank:8082/";
+                  BANK_DIALECT = "postfinance";
+
+                  # EBICS IDs
+                  HOST_ID = "PFEBICS";
+                  USER_ID = "PFC00563";
+                  PARTNER_ID = "PFC00563";
+
+                  # Account information
+                  IBAN = "CH7789144474425692816";
+                  BIC = "POFICHBEXXX";
+                  NAME = "John Smith S.A.";
                 };
                 libeufin-nexusdb-postgres.CONFIG = "postgresql:///libeufin-nexus";
               };
