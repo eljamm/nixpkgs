@@ -28,7 +28,7 @@ import ../make-test-python.nix (
                 BASE_URL = "http://exchange:8081/";
               };
               settings.exchange-offline = {
-                MASTER_PRIV_FILE = "${./master.priv}";
+                MASTER_PRIV_FILE = "${./private.key}";
               };
             };
           };
