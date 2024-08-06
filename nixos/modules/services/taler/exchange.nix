@@ -67,6 +67,11 @@ in
     };
     debug = lib.mkEnableOption "debug logging";
     settings = lib.mkOption {
+      description = ''
+        Configuration options for the taler exchange config file.
+
+        For a list of all possible options, please see the man page [`taler.conf(5)`](https://docs.taler.net/manpages/taler.conf.5.html#exchange-options)
+      '';
       type = lib.types.submodule {
         inherit (options.services.taler.settings.type.nestedTypes) freeformType;
         options = {
@@ -76,6 +81,7 @@ in
               type = lib.types.str;
               default = "${config.services.taler.settings.taler.CURRENCY}:1000000";
               defaultText = "1000000 in {option}`CURRENCY`";
+              description = "Monthly transaction volume until an account is considered suspicious and flagged for AML review.";
             };
             DB = lib.mkOption {
               type = lib.types.str;
@@ -93,10 +99,12 @@ in
                 To generate this key, you must run `taler-exchange-offline setup`. It will print the public key.
               '';
               defaultText = "None, you must set this yourself.";
+              description = "Used by the exchange to verify information signed by the offline system.";
             };
             PORT = lib.mkOption {
               type = lib.types.port;
               default = 8081;
+              description = "Port on which the HTTP server listens.";
             };
           };
           exchangedb-postgres = {

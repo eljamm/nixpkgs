@@ -40,6 +40,11 @@ in
         '';
     };
     settings = lib.mkOption {
+      description = ''
+        Global configuration options for the taler config file.
+
+        For a list of all possible options, please see the man page [`taler.conf(5)`](https://docs.taler.net/manpages/taler.conf.5.html)
+      '';
       type = lib.types.submodule {
         freeformType = settingsFormat.type;
         options = {

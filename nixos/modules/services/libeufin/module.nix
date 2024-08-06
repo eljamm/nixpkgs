@@ -18,6 +18,7 @@ in
       default = settingsFormat.generate "generated-libeufin.conf" this.settings;
     };
     settings = lib.mkOption {
+      description = "Global configuration options for the libeufin bank system config file.";
       type = lib.types.submodule { freeformType = settingsFormat.type; };
       default = { };
     };
