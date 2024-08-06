@@ -117,7 +117,6 @@ import ../make-test-python.nix (
       { nodes, ... }:
       let
         bankConfig = toString nodes.bank.services.libeufin.configFile.outPath;
-        talerConfig = toString nodes.exchange.services.taler.configFile.outPath;
 
         bankSettings = nodes.bank.services.libeufin.settings.libeufin-bank;
 
