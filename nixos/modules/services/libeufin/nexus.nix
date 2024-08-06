@@ -140,6 +140,7 @@ in
             DynamicUser = true;
             User = nexusServiceName;
             ExecStart = "${nexusExe} serve -c ${configFile}" + lib.optionalString this.debug " -L debug";
+            ReadWritePaths = [ "/var/lib/libeufin-nexus" ];
           };
           requires = [ "${dbinitServiceName}.service" ];
           after = [ "${dbinitServiceName}.service" ];

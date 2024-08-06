@@ -66,21 +66,22 @@ import ../make-test-python.nix (
               debug = true;
               settings = {
                 nexus-ebics = {
-                  CURRENCY = "CHF";
-
+                  # == Mandatory ==
+                  inherit CURRENCY;
                   # Bank
                   HOST_BASE_URL = "http://bank:8082/";
                   BANK_DIALECT = "postfinance";
-
                   # EBICS IDs
                   HOST_ID = "PFEBICS";
                   USER_ID = "PFC00563";
                   PARTNER_ID = "PFC00563";
-
                   # Account information
                   IBAN = "CH7789144474425692816";
                   BIC = "POFICHBEXXX";
                   NAME = "John Smith S.A.";
+
+                  # == Optional ==
+                  CLIENT_PRIVATE_KEYS_FILE = "$HOME/client-ebics-keys.json";
                 };
                 libeufin-nexusdb-postgres.CONFIG = "postgresql:///libeufin-nexus";
               };
@@ -131,6 +132,7 @@ import ../make-test-python.nix (
         bankConfig = toString nodes.bank.services.libeufin.configFile.outPath;
 
         bankSettings = nodes.bank.services.libeufin.settings.libeufin-bank;
+        nexusSettings = nodes.bank.services.libeufin.settings.nexus-ebics;
 
         # Bank admin account credentials
         AUSER = "admin";
@@ -172,6 +174,24 @@ import ../make-test-python.nix (
               -a wget-register-account.log \
               "http://bank:${toString bankSettings.PORT}/accounts"
           '';
+
+        nexus_fake_incoming = pkgs.writeShellScript "nexus_fake_incoming" ''
+          set -eux
+          RESERVE_PUB=$(
+            taler-wallet-cli \
+              api 'acceptManualWithdrawal' \
+                '{"exchangeBaseUrl":"http://exchange:8081/",
+                  "amount":"${nexusSettings.CURRENCY}:20"
+                 }' | jq -r .result.reservePub
+            )
+
+          libeufin-nexus \
+            testing fake-incoming \
+            -c ${bankConfig} \
+            --amount="${nexusSettings.CURRENCY}:20" \
+            --subject="$RESERVE_PUB" \
+            "payto://iban/CH8389144317421994586"
+        '';
       in
 
       # NOTE: for NeoVim formatting and highlights. Remove later.
@@ -309,6 +329,14 @@ import ../make-test-python.nix (
                     client.fail(f'echo Wanted balance: "{balanceWanted}", got: "{balanceGot}"')
                 else:
                     client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
+
+        with subtest("Nexus fake incoming payment"):
+            # Setup ebics keys
+            bank.succeed("libeufin-nexus ebics-setup -L debug -c ${bankConfig}")
+
+            # Make fake transaction
+            systemd_run(bank, "${nexus_fake_incoming}", "libeufin-nexus")
+            wallet_cli("run-until-done")
       '';
   }
 )
