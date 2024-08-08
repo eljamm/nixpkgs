@@ -81,7 +81,7 @@ import ../make-test-python.nix (
                   NAME = "John Smith S.A.";
 
                   # == Optional ==
-                  CLIENT_PRIVATE_KEYS_FILE = "$HOME/client-ebics-keys.json";
+                  CLIENT_PRIVATE_KEYS_FILE = "/var/lib/libeufin-nexus/client-ebics-keys.json";
                 };
                 libeufin-nexusdb-postgres.CONFIG = "postgresql:///libeufin-nexus";
               };
