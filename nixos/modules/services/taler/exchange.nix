@@ -112,6 +112,7 @@ in
               type = lib.types.str;
               internal = true;
               default = "postgres:///${dbName}";
+              description = "Database connection URI.";
             };
           };
         };
@@ -152,7 +153,7 @@ in
           User = name;
           Group = groupName;
           ExecStart =
-            "${this.package}/bin/${name} -c ${configFile}" + lib.optionalString this.debug " -L debug";
+            "${lib.getExe' this.package name} -c ${configFile}" + lib.optionalString this.debug " -L debug";
           RuntimeDirectory = name;
           StateDirectory = name;
           CacheDirectory = name;
@@ -184,7 +185,7 @@ in
               '';
             in
             ''
-              ${this.package}/bin/taler-exchange-dbinit
+              ${lib.getExe' this.package "taler-exchange-dbinit"}
 
               psql -f ${dbScript}
             '';
@@ -200,7 +201,9 @@ in
       // {
         taler-exchange-accounts = {
           script = lib.concatStringsSep "\n" (
-            map (account: "${this.package}/bin/taler-exchange-offline upload < ${account}") this.enableAccounts
+            map (
+              account: "${lib.getExe' this.package "taler-exchange-offline"} upload < ${account}"
+            ) this.enableAccounts
           );
           requires = [ "taler-exchange-httpd.service" ];
           after = [ "taler-exchange-httpd.service" ];
