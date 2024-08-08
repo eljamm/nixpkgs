@@ -1320,6 +1320,7 @@
   ./services/system/uptimed.nix
   ./services/system/zram-generator.nix
   ./services/taler/exchange.nix
+  ./services/taler/merchant.nix
   ./services/taler/module.nix
   ./services/torrent/deluge.nix
   ./services/torrent/flexget.nix
