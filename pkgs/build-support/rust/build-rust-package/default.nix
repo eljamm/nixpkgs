@@ -82,6 +82,8 @@ let
   targetIsJSON = lib.hasSuffix ".json" target;
   useSysroot = targetIsJSON && !__internal_dontAddSysroot;
 
+  isDarwinDebug = stdenv.isDarwin && buildType == "debug";
+
   sysroot = callPackage ./sysroot { } {
     inherit target;
     shortTarget = stdenv.hostPlatform.rust.cargoShortTarget;
@@ -96,7 +98,7 @@ in
 assert useSysroot -> !(args.doCheck or true);
 
 stdenv.mkDerivation ((removeAttrs args [ "depsExtraArgs" "cargoUpdateHook" "cargoLock" ]) // lib.optionalAttrs useSysroot {
-  RUSTFLAGS = "--sysroot ${sysroot} " + (args.RUSTFLAGS or "");
+  RUSTFLAGS = "--sysroot ${sysroot} " + (args.RUSTFLAGS or "") + (lib.optionalString isDarwinDebug "-C split-debuginfo=packed ");
 } // {
   inherit buildAndTestSubdir cargoDeps;
 
