@@ -132,6 +132,9 @@ stdenv.mkDerivation (
       + (args.RUSTFLAGS or "")
       + lib.optionalString isDarwinDebug "-C split-debuginfo=packed ";
   }
+  // lib.optionalAttrs isDarwinDebug {
+    RUSTFLAGS = (args.RUSTFLAGS or "") + lib.optionalString isDarwinDebug "-C split-debuginfo=packed ";
+  }
   // {
     inherit buildAndTestSubdir cargoDeps;
 
