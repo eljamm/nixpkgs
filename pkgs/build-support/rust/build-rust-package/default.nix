@@ -126,11 +126,9 @@ stdenv.mkDerivation (
     "cargoUpdateHook"
     "cargoLock"
   ])
-  // lib.optionalAttrs useSysroot {
-    RUSTFLAGS =
-      "--sysroot ${sysroot} "
-      + (args.RUSTFLAGS or "")
-      + (lib.optionalString isDarwinDebug "-C split-debuginfo=packed ");
+  // lib.optionalAttrs useSysroot { RUSTFLAGS = "--sysroot ${sysroot} " + (args.RUSTFLAGS or ""); }
+  // lib.optionalAttrs (useSysroot && isDarwinDebug) {
+    RUSTFLAGS = "--sysroot ${sysroot} " + (args.RUSTFLAGS or "") + "-C split-debuginfo=packed ";
   }
   // {
     inherit buildAndTestSubdir cargoDeps;
