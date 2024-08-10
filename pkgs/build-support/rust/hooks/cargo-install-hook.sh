@@ -39,6 +39,10 @@ cargoInstallHook() {
     rmdir --ignore-fail-on-non-empty $out/lib $out/bin
     runHook postInstall
 
+    # If present, copy any .dSYM directories for debugging on darwin
+    # https://github.com/NixOS/nixpkgs/issues/330036
+    find "${releaseDir}" -maxdepth 1 -name '*.dSYM' -exec cp -RLt $out/bin/ {} +
+
     echo "Finished cargoInstallHook"
 }
 
