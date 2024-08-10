@@ -107,13 +107,9 @@ let
 
   isDarwinDebug = stdenv.isDarwin && buildType == "debug";
 
-  RUSTFLAGS =
-    toString (args.env.RUSTFLAGS or args.RUSTFLAGS or "")
-    + lib.optionalString isDarwinDebug "-C split-debuginfo=packed "
-    + lib.optionalString useSysroot "--sysroot ${sysroot} ";
-
   sysroot = callPackage ./sysroot { } {
-    inherit target RUSTFLAGS;
+    inherit target;
+    RUSTFLAGS = args.RUSTFLAGS or "";
     shortTarget = stdenv.hostPlatform.rust.cargoShortTarget;
     originalCargoToml = src + /Cargo.toml; # profile info is later extracted
   };
@@ -130,8 +126,11 @@ stdenv.mkDerivation (
     "cargoUpdateHook"
     "cargoLock"
   ])
-  // lib.optionalAttrs (args ? RUSTFLAGS) {
-    RUSTFLAGS = if isDarwinDebug then RUSTFLAGS else args.RUSTFLAGS;
+  // lib.optionalAttrs useSysroot {
+    RUSTFLAGS =
+      "--sysroot ${sysroot} "
+      + (args.RUSTFLAGS or "")
+      + lib.optionalString isDarwinDebug "-C split-debuginfo=packed ";
   }
   // {
     inherit buildAndTestSubdir cargoDeps;
