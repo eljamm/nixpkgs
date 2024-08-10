@@ -130,8 +130,12 @@ stdenv.mkDerivation (
     "cargoUpdateHook"
     "cargoLock"
   ])
-  // lib.optionalAttrs (isDarwinDebug && (args ? env.RUSTFLAGS)) { env.RUSTFLAGS = RUSTFLAGS; }
-  // lib.optionalAttrs (isDarwinDebug && (args ? RUSTFLAGS)) { inherit RUSTFLAGS; }
+  // lib.optionalAttrs (args ? env.RUSTFLAGS) {
+    env.RUSTFLAGS = if isDarwinDebug then RUSTFLAGS else args.env.RUSTFLAGS;
+  }
+  // lib.optionalAttrs (args ? RUSTFLAGS) {
+    RUSTFLAGS = if isDarwinDebug then RUSTFLAGS else args.RUSTFLAGS;
+  }
   // {
     inherit buildAndTestSubdir cargoDeps;
 
