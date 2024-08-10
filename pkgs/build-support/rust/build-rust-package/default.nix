@@ -113,7 +113,7 @@ let
     + lib.optionalString useSysroot "--sysroot ${sysroot} ";
 
   sysroot = callPackage ./sysroot { } {
-    inherit target;
+    inherit target RUSTFLAGS;
     shortTarget = stdenv.hostPlatform.rust.cargoShortTarget;
     originalCargoToml = src + /Cargo.toml; # profile info is later extracted
   };
