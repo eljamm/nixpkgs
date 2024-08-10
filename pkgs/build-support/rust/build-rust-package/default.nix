@@ -113,7 +113,7 @@ let
     + lib.optionalString useSysroot "--sysroot ${sysroot} ";
 
   sysroot = callPackage ./sysroot { } {
-    inherit target RUSTFLAGS;
+    inherit target;
     shortTarget = stdenv.hostPlatform.rust.cargoShortTarget;
     originalCargoToml = src + /Cargo.toml; # profile info is later extracted
   };
@@ -130,9 +130,6 @@ stdenv.mkDerivation (
     "cargoUpdateHook"
     "cargoLock"
   ])
-  // lib.optionalAttrs (args ? env.RUSTFLAGS) {
-    env.RUSTFLAGS = if isDarwinDebug then RUSTFLAGS else args.env.RUSTFLAGS;
-  }
   // lib.optionalAttrs (args ? RUSTFLAGS) {
     RUSTFLAGS = if isDarwinDebug then RUSTFLAGS else args.RUSTFLAGS;
   }
