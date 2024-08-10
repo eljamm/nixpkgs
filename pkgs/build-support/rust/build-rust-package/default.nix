@@ -100,7 +100,7 @@ assert useSysroot -> !(args.doCheck or true);
 stdenv.mkDerivation ((removeAttrs args [ "depsExtraArgs" "cargoUpdateHook" "cargoLock" ]) // lib.optionalAttrs useSysroot {
   RUSTFLAGS = "--sysroot ${sysroot} " + (args.RUSTFLAGS or "");
 } // lib.optionalAttrs isDarwinDebug {
-  RUSTFLAGS = "-C split-debuginfo=packed " + (args.RUSTFLAGS or "");
+  RUSTFLAGS = "-C split-debuginfo=packed " + lib.optionalString useSysroot "--sysroot ${sysroot} " + (args.RUSTFLAGS or "");
 } // {
   inherit buildAndTestSubdir cargoDeps;
 
