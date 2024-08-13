@@ -163,6 +163,7 @@ import ../make-test-python.nix (
         TUSER = "testUser";
         TPASS = "testUser";
 
+        # TODO: Move scripts to separate directory?
         register_bank_account =
           {
             username,
