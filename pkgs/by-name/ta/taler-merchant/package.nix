@@ -37,14 +37,15 @@ stdenv.mkDerivation {
     ln -s ${taler-wallet-core}/spa.html $sourceRoot/contrib/
   '';
 
-  # TODO: These wrongly use the taler-exchange prefix for the `templates` and
-  # `spa`, which prevents the merchant fron starting.
-  # It's unclear how patching these out affects the program, but it would be
-  # ideal to fix this upstream.
+  # The `taler-exchange` prefix is wrongly used for `templates` and `spa`,
+  # which prevents the merchant fron starting.
   postPatch = ''
+    # TODO: can't request payment wihtout templates
     substituteInPlace src/backend/taler-merchant-httpd.c \
       --replace-fail 'TALER_TEMPLATING_init ("merchant");' " " \
-      --replace-fail 'TMH_spa_init ())' 'GNUNET_OK)'
+
+    substituteInPlace src/backend/taler-merchant-httpd_spa.c \
+      --replace-fail 'GNUNET_DISK_directory_scan (dn,' "GNUNET_DISK_directory_scan (\"$out/share/taler/merchant/spa/\","
   '';
 
   nativeBuildInputs = [
@@ -65,16 +66,13 @@ stdenv.mkDerivation {
   # From ./bootstrap
   preAutoreconf = ''
     pushd contrib
-    find wallet-core/backoffice/ -type f -printf '  %p \\\n' | sort > Makefile.am.ext
+    rm -f Makefile.am
+    find wallet-core/backoffice/ -type f | sort | awk '{print "  " $1 " \\" }' > Makefile.am.ext
     truncate -s -2 Makefile.am.ext
     cat Makefile.am.in Makefile.am.ext >> Makefile.am
+    chmod -w Makefile.am
     popd
   '';
-
-  configureFlags = [
-    "--with-gnunet=${gnunet}"
-    "--with-exchange=${taler-exchange}"
-  ];
 
   # NOTE: The program that need database access fails to detect the postgresql
   # library in `$out/lib/taler`, so we need to wrap them.
