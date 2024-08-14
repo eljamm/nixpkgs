@@ -326,8 +326,8 @@ import ../make-test-python.nix (
                 ])
             )
 
-            # Accept & conform withdrawal
-            with subtest("Accept & conform withdrawal"):
+            # Accept & confirm withdrawal
+            with subtest("Accept & confirm withdrawal"):
                 wallet_cli(f"withdraw accept-uri {withdrawal["taler_withdraw_uri"]} --exchange http://exchange:8081/")
                 curl(client, [
                     "curl -X POST",
