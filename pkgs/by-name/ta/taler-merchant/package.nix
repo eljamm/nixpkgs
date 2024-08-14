@@ -40,9 +40,8 @@ stdenv.mkDerivation {
   # The `taler-exchange` prefix is wrongly used for `templates` and `spa`,
   # which prevents the merchant fron starting.
   postPatch = ''
-    # TODO: can't request payment wihtout templates
     substituteInPlace src/backend/taler-merchant-httpd.c \
-      --replace-fail 'TALER_TEMPLATING_init ("merchant");' " " \
+      --replace-fail 'TALER_TEMPLATING_init ("merchant");' "TALER_TEMPLATING_init_path (\"merchant\", \"$out/share/taler\");"
 
     substituteInPlace src/backend/taler-merchant-httpd_spa.c \
       --replace-fail 'GNUNET_DISK_directory_scan (dn,' "GNUNET_DISK_directory_scan (\"$out/share/taler/merchant/spa/\","
