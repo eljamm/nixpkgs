@@ -8,6 +8,10 @@
   makeWrapper,
 }:
 
+let
+  customPython = python3.withPackages (p: [ p.setuptools ]);
+in
+
 stdenv.mkDerivation rec {
   pname = "libeufin";
   version = "0.11.3";
@@ -55,10 +59,11 @@ stdenv.mkDerivation rec {
   ];
 
   nativeBuildInputs = [
-    python3
-    jdk17_headless
+    customPython
     gradle
+    jdk17_headless
     makeWrapper
+    python3
   ];
 
   # # Tell gradle to use the offline Maven repository
@@ -86,7 +91,7 @@ stdenv.mkDerivation rec {
   # TODO there's a postgres runner thingy you could use here
   doCheck = false;
 
-  passthru.updateDeps = gradle.updateDeps { inherit pname; };
+  passthru.updateDeps = gradle.updateDeps { inherit (finalAttrs) pname; };
 
   meta = {
     homepage = "https://git.taler.net/libeufin.git/";
