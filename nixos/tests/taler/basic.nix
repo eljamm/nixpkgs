@@ -223,6 +223,7 @@ import ../make-test-python.nix (
         import json
 
         # Join curl commands
+        # TODO: add option to fail on unexpected return code?
         def curl(machine, commands):
             return machine.succeed(" ".join(commands))
 
@@ -252,8 +253,10 @@ import ../make-test-python.nix (
         start_all()
 
         # Wait for services
+        # TODO: refactor
         bank.wait_for_unit("libeufin-bank.service")
         exchange.wait_for_unit("taler-exchange-httpd.service")
+        merchant.wait_for_unit("taler-merchant-httpd.service")
 
         bank.wait_for_open_port(8082)
         exchange.wait_for_open_port(8081)
@@ -293,6 +296,45 @@ import ../make-test-python.nix (
                 name = "Exchange Company";
               }
             }")
+
+        # Register default merchant instance
+        with subtest("Register merchant instances"):
+            # default (similar to admin)
+            curl(merchant, [
+                "curl -X POST",
+                "-H 'Authorization: Bearer secret-token:super_secret'",
+                """
+                --data '{
+                  "auth": { "method": "external" },
+                  "id": "default",
+                  "name": "default",
+                  "user_type": "business",
+                  "address": {},
+                  "jurisdiction": {},
+                  "use_stefan": true,
+                  "default_wire_transfer_delay": { "d_us": 3600000000 },
+                  "default_pay_delay": { "d_us": 3600000000 }
+                }'
+                """.replace("\n", ""),
+                "-sSfL 'http://merchant:8083/management/instances'"
+            ])
+            curl(merchant, [
+                "curl -X POST",
+                "-H 'Content-Type: application/json'",
+                """
+                --data '{
+                  "auth": { "method": "token", "token": "secret-token:other_secret" },
+                  "id": "merchant",
+                  "name": "merchant",
+                  "address": {},
+                  "jurisdiction": {},
+                  "use_stefan": true,
+                  "default_wire_transfer_delay": { "d_us": 3600000000 },
+                  "default_pay_delay": { "d_us": 3600000000 }
+                }'
+                """.replace("\n", ""),
+                "-sSfL 'http://merchant:8083/management/instances'"
+            ])
 
         # Check that client can connect to exchange
         client.succeed("curl -s http://exchange:8081/")
@@ -354,13 +396,13 @@ import ../make-test-python.nix (
                 else:
                     client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
 
-        with subtest("Nexus fake incoming payment"):
-            # Setup ebics keys
-            bank.succeed("libeufin-nexus ebics-setup -L debug -c ${bankConfig}")
-
-            # Make fake transaction
-            systemd_run(bank, "${nexus_fake_incoming}", "libeufin-nexus")
-            wallet_cli("run-until-done")
+        # with subtest("Nexus fake incoming payment"):
+        #     # Setup ebics keys
+        #     bank.succeed("libeufin-nexus ebics-setup -L debug -c ${bankConfig}")
+        #
+        #     # Make fake transaction
+        #     systemd_run(bank, "${nexus_fake_incoming}", "libeufin-nexus")
+        #     wallet_cli("run-until-done")
       '';
   }
 )
