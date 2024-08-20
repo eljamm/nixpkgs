@@ -44,13 +44,13 @@ let
   };
   customPython = python3.withPackages (p: [ p.setuptools ]);
 in
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "taler-wallet-core";
   version = "0.12.6";
 
   src = fetchgit {
     url = "https://git.taler.net/wallet-core.git";
-    rev = "v${version}";
+    rev = "v${finalAttrs.version}";
     hash = "sha256-gZfXzw3B1Ei2F5o07bpPm6o2alcZ41R6OyhSpew0eTA=";
   };
 
@@ -64,7 +64,7 @@ stdenv.mkDerivation rec {
   ];
 
   pnpmDeps = pnpm.fetchDeps {
-    inherit pname version src;
+    inherit (finalAttrs) pname version src;
     hash = "sha256-OwZLRv2ZWJ01pHWS+CGxvM4J19tGnEsRJ9S3bcsaWSE=";
   };
 
@@ -111,4 +111,4 @@ stdenv.mkDerivation rec {
     license = lib.licenses.gpl3Plus;
     platforms = lib.platforms.linux;
   };
-}
+})
