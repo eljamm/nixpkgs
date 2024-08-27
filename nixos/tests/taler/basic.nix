@@ -296,10 +296,16 @@ import ../make-test-python.nix (
                 name = "Exchange Company";
               }
             }")
+            bank.succeed("${
+              register_bank_account {
+                username = "merchant";
+                password = "merchant";
+                name = "Merchant Company";
+              }
+            }")
 
-        # Register default merchant instance
+        # Register default merchant instance (similar to admin)
         with subtest("Register merchant instances"):
-            # default (similar to admin)
             curl(merchant, [
                 "curl -X POST",
                 "-H 'Authorization: Bearer secret-token:super_secret'",
@@ -318,22 +324,16 @@ import ../make-test-python.nix (
                 """.replace("\n", ""),
                 "-sSfL 'http://merchant:8083/management/instances'"
             ])
+            # Register bank account address
             curl(merchant, [
                 "curl -X POST",
                 "-H 'Content-Type: application/json'",
                 """
                 --data '{
-                  "auth": { "method": "token", "token": "secret-token:other_secret" },
-                  "id": "merchant",
-                  "name": "merchant",
-                  "address": {},
-                  "jurisdiction": {},
-                  "use_stefan": true,
-                  "default_wire_transfer_delay": { "d_us": 3600000000 },
-                  "default_pay_delay": { "d_us": 3600000000 }
+                  "payto_uri": "payto://x-taler-bank/localhost/merchant?receiver-name=merchant"
                 }'
                 """.replace("\n", ""),
-                "-sSfL 'http://merchant:8083/management/instances'"
+                "-sSfL 'http://merchant:8083/private/accounts'"
             ])
 
         # Check that client can connect to exchange
@@ -383,6 +383,72 @@ import ../make-test-python.nix (
 
             # Verify balance
             with subtest("Verify balance"):
+                # Safely read the balance
+                balance = wallet_cli("balance --json")
+                try:
+                    balanceGot = json.loads(balance)["balances"][0]["available"]
+                except:
+                    balanceGot = "${CURRENCY}:0"
+
+                # Compare balance with expected value
+                if balanceGot != balanceWanted:
+                    client.fail(f'echo Wanted balance: "{balanceWanted}", got: "{balanceGot}"')
+                else:
+                    client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
+
+
+        breakpoint()
+        with subtest("Pay for an order"):
+            # Register a new product
+            curl(merchant, [
+                "curl -X POST",
+                "-H 'Content-Type: application/json'",
+                """
+                --data '{
+                  "product_id": "1",
+                  "description": "Product with id 1 and price :15",
+                  "price": "KUDOS:10",
+                  "total_stock": 20,
+                  "unit": "packages",
+                  "next_restock": { "t_s": "never" }
+                }'
+                """.replace("\n", ""),
+                "-sSfL 'http://merchant:8083/private/products'"
+            ])
+            # Create an order to be paid
+            response = json.loads(
+                curl(merchant, [
+                    "curl -X POST",
+                    "-H 'Content-Type: application/json'",
+                    """
+                    --data '{
+                      "order": { "amount": "KUDOS:10", "summary": "Test Order" },
+                      "inventory_products": [{ "product_id": "1", "quantity": 1 }]
+                    }'
+                    """.replace("\n", ""),
+                    "-sSfL 'http://merchant:8083/private/orders'"
+                ])
+            )
+            order_id = response["order_id"]
+            token = response["token"]
+
+            # Get order pay URI
+            response = json.loads(
+                curl(merchant, [
+                    "curl -sSfL",
+                    f"http://merchant:8083/private/orders/{order_id}"
+                ])
+            )
+
+            breakpoint()
+            # Process transaction
+            wallet_cli(f"handle-uri --withdrawal-exchange 'http://exchange:8081/' -y '{response["taler_pay_uri"]}'")
+            wallet_cli("run-until-done")
+
+            # Verify balance
+            with subtest("Verify balance"):
+                balanceWanted = "${CURRENCY}:15"
+
                 # Safely read the balance
                 balance = wallet_cli("balance --json")
                 try:
