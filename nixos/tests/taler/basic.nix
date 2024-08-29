@@ -252,12 +252,6 @@ import ../make-test-python.nix (
 
         start_all()
 
-        # Wait for services
-        # TODO: refactor
-        bank.wait_for_unit("libeufin-bank.service")
-        exchange.wait_for_unit("taler-exchange-httpd.service")
-        merchant.wait_for_unit("taler-merchant-httpd.service")
-
         bank.wait_for_open_port(8082)
         exchange.wait_for_open_port(8081)
         merchant.wait_for_open_port(8083)
@@ -341,14 +335,13 @@ import ../make-test-python.nix (
 
         # Make a withdrawal from the CLI wallet
         with subtest("Make a withdrawal from the CLI wallet"):
-            balanceWanted = "${CURRENCY}:25"
+            balanceWanted = "${CURRENCY}:10"
 
             # Wallet wrapper
             def wallet_cli(command):
                 return client.succeed(
                     "taler-wallet-cli "
-                    "--skip-defaults "  # skip configuring default exchanges # NOTE: does this not work?
-                    "--no-throttle "    # don't do any request throttling    # TODO: see if this affects test speed
+                    "--no-throttle "    # don't do any request throttling
                     + command
                 )
 
@@ -406,8 +399,8 @@ import ../make-test-python.nix (
                 """
                 --data '{
                   "product_id": "1",
-                  "description": "Product with id 1 and price :15",
-                  "price": "KUDOS:10",
+                  "description": "Product with id 1 and price 1",
+                  "price": "KUDOS:1",
                   "total_stock": 20,
                   "unit": "packages",
                   "next_restock": { "t_s": "never" }
@@ -422,7 +415,7 @@ import ../make-test-python.nix (
                     "-H 'Content-Type: application/json'",
                     """
                     --data '{
-                      "order": { "amount": "KUDOS:10", "summary": "Test Order" },
+                      "order": { "amount": "KUDOS:1", "summary": "Test Order" },
                       "inventory_products": [{ "product_id": "1", "quantity": 1 }]
                     }'
                     """.replace("\n", ""),
@@ -439,15 +432,15 @@ import ../make-test-python.nix (
                     f"http://merchant:8083/private/orders/{order_id}"
                 ])
             )
+            wallet_cli("run-until-done")
 
-            breakpoint()
             # Process transaction
             wallet_cli(f"handle-uri --withdrawal-exchange 'http://exchange:8081/' -y '{response["taler_pay_uri"]}'")
             wallet_cli("run-until-done")
 
             # Verify balance
             with subtest("Verify balance"):
-                balanceWanted = "${CURRENCY}:15"
+                balanceWanted = "${CURRENCY}:9"
 
                 # Safely read the balance
                 balance = wallet_cli("balance --json")
