@@ -2,7 +2,7 @@
   {
     "operation": "exchange-enable-wire-0",
     "arguments": {
-      "payto_uri": "payto://x-taler-bank/exchange:8081/exchange?receiver-name=exchange",
+      "payto_uri": "payto://x-taler-bank/bank:8082/exchange?receiver-name=exchange",
       "debit_restrictions": [],
       "credit_restrictions": [],
       "priority": 0,

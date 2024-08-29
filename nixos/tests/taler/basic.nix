@@ -68,7 +68,7 @@ import ../make-test-python.nix (
                 libeufin-bank = {
                   # SUGGESTED_WITHDRAWAL_EXCHANGE = "http://exchange:8081";
                   WIRE_TYPE = "x-taler-bank";
-                  X_TALER_BANK_PAYTO_HOSTNAME = "http://bank:8082/";
+                  X_TALER_BANK_PAYTO_HOSTNAME = "bank:8082";
 
                   # Allow creating new accounts
                   ALLOW_REGISTRATION = "yes";
@@ -265,7 +265,7 @@ import ../make-test-python.nix (
         # Enable exchange wire account
         with subtest("Enable exchange wire account"):
             exchange.wait_until_succeeds("taler-exchange-offline download sign upload")
-            exchange.succeed('taler-exchange-offline enable-account "payto://x-taler-bank/exchange:8081/exchange?receiver-name=exchange" upload')
+            exchange.succeed('taler-exchange-offline enable-account "payto://x-taler-bank/bank:8082/exchange?receiver-name=exchange" upload')
 
         # Modify bank's admin account
         with subtest("Modify bank's admin account"):
@@ -330,7 +330,7 @@ import ../make-test-python.nix (
                 "-H 'Content-Type: application/json'",
                 """
                 --data '{
-                  "payto_uri": "payto://x-taler-bank/localhost/merchant?receiver-name=merchant"
+                  "payto_uri": "payto://x-taler-bank/bank:8082/merchant?receiver-name=merchant"
                 }'
                 """.replace("\n", ""),
                 "-sSfL 'http://merchant:8083/private/accounts'"
