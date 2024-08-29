@@ -345,6 +345,19 @@ import ../make-test-python.nix (
                     + command
                 )
 
+            def verify_balance(balanceWanted):
+                balance = wallet_cli("balance --json")
+                try:
+                    balanceGot = json.loads(balance)["balances"][0]["available"]
+                except:
+                    balanceGot = "${CURRENCY}:0"
+
+                # Compare balance with expected value
+                if got != wanted:
+                    client.fail(f'echo Wanted balance: "{balanceWanted}", got: "{balanceGot}"')
+                else:
+                    client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
+
             # Register exchange
             with subtest("Register exchange"):
                 wallet_cli("exchanges add http://exchange:8081/")
@@ -374,24 +387,13 @@ import ../make-test-python.nix (
             # Process transactions
             wallet_cli("run-until-done")
 
-            # Verify balance
-            with subtest("Verify balance"):
-                # Safely read the balance
-                balance = wallet_cli("balance --json")
-                try:
-                    balanceGot = json.loads(balance)["balances"][0]["available"]
-                except:
-                    balanceGot = "${CURRENCY}:0"
-
-                # Compare balance with expected value
-                if balanceGot != balanceWanted:
-                    client.fail(f'echo Wanted balance: "{balanceWanted}", got: "{balanceGot}"')
-                else:
-                    client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
+            verify_balance(balanceWanted)
 
 
         breakpoint()
         with subtest("Pay for an order"):
+            balanceWanted = "${CURRENCY}:9" # after paying
+
             # Register a new product
             curl(merchant, [
                 "curl -X POST",
@@ -438,22 +440,7 @@ import ../make-test-python.nix (
             wallet_cli(f"handle-uri --withdrawal-exchange 'http://exchange:8081/' -y '{response["taler_pay_uri"]}'")
             wallet_cli("run-until-done")
 
-            # Verify balance
-            with subtest("Verify balance"):
-                balanceWanted = "${CURRENCY}:9"
-
-                # Safely read the balance
-                balance = wallet_cli("balance --json")
-                try:
-                    balanceGot = json.loads(balance)["balances"][0]["available"]
-                except:
-                    balanceGot = "${CURRENCY}:0"
-
-                # Compare balance with expected value
-                if balanceGot != balanceWanted:
-                    client.fail(f'echo Wanted balance: "{balanceWanted}", got: "{balanceGot}"')
-                else:
-                    client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
+            verify_balance(balanceWanted)
 
         # with subtest("Nexus fake incoming payment"):
         #     # Setup ebics keys
