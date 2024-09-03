@@ -2,6 +2,29 @@ import ../make-test-python.nix (
   { pkgs, lib, ... }:
   let
     CURRENCY = "KUDOS";
+
+    # Enable SSH on machine, recursively merge with settings
+    #
+    # Connect with: ssh root@localhost -p <hostPort>
+    enableSSH =
+      hostPort: settings:
+      lib.recursiveUpdate {
+        virtualisation.forwardPorts = [
+          {
+            from = "host";
+            host.port = hostPort; # ssh
+            guest.port = 22;
+          }
+        ];
+        services.openssh = {
+          enable = true;
+          settings = {
+            PermitRootLogin = "yes";
+            PermitEmptyPasswords = "yes";
+          };
+        };
+        security.pam.services.sshd.allowNullPassword = true;
+      } settings;
   in
   {
     name = "taler";
@@ -12,7 +35,7 @@ import ../make-test-python.nix (
     nodes = {
       exchange =
         { config, lib, ... }:
-        {
+        enableSSH 1111 {
           services.taler = {
             settings = {
               taler.CURRENCY = CURRENCY;
@@ -38,7 +61,7 @@ import ../make-test-python.nix (
 
       merchant =
         { config, ... }:
-        {
+        enableSSH 2222 {
           services.taler = {
             settings = {
               taler.CURRENCY = CURRENCY;
@@ -55,57 +78,64 @@ import ../make-test-python.nix (
           };
           networking.firewall.enable = false;
           environment.systemPackages = [ config.services.taler.merchant.package ];
+          # Access WebUI from http://localhost:8083/
+          virtualisation.forwardPorts = [
+            {
+              from = "host";
+              host.port = 8083;
+              guest.port = 8083;
+            }
+          ];
         };
 
       bank =
         { config, pkgs, ... }:
-        {
-          services.libeufin = {
-            bank = {
-              enable = true;
-              debug = true;
-              settings = {
-                libeufin-bank = {
-                  # SUGGESTED_WITHDRAWAL_EXCHANGE = "http://exchange:8081";
-                  WIRE_TYPE = "x-taler-bank";
-                  X_TALER_BANK_PAYTO_HOSTNAME = "bank:8082";
+        enableSSH 3333 {
+          services.libeufin.bank = {
+            enable = true;
+            debug = true;
+            settings = {
+              libeufin-bank = {
+                # SUGGESTED_WITHDRAWAL_EXCHANGE = "http://exchange:8081";
+                WIRE_TYPE = "x-taler-bank";
+                X_TALER_BANK_PAYTO_HOSTNAME = "bank:8082";
 
-                  # Allow creating new accounts
-                  ALLOW_REGISTRATION = "yes";
+                # Allow creating new accounts
+                ALLOW_REGISTRATION = "yes";
 
-                  # A registration bonus makes withdrawals easier since the
-                  # bank account balance is not empty
-                  REGISTRATION_BONUS_ENABLED = "yes";
-                  REGISTRATION_BONUS = "${CURRENCY}:100";
+                # A registration bonus makes withdrawals easier since the
+                # bank account balance is not empty
+                REGISTRATION_BONUS_ENABLED = "yes";
+                REGISTRATION_BONUS = "${CURRENCY}:100";
 
-                  inherit CURRENCY;
-                };
+                inherit CURRENCY;
               };
             };
-            nexus = {
-              enable = true;
-              debug = true;
-              settings = {
-                nexus-ebics = {
-                  # == Mandatory ==
-                  inherit CURRENCY;
-                  # Bank
-                  HOST_BASE_URL = "http://bank:8082/";
-                  BANK_DIALECT = "postfinance";
-                  # EBICS IDs
-                  HOST_ID = "PFEBICS";
-                  USER_ID = "PFC00563";
-                  PARTNER_ID = "PFC00563";
-                  # Account information
-                  IBAN = "CH7789144474425692816";
-                  BIC = "POFICHBEXXX";
-                  NAME = "John Smith S.A.";
+          };
 
-                  # == Optional ==
-                  CLIENT_PRIVATE_KEYS_FILE = "/var/lib/libeufin-nexus/client-ebics-keys.json";
-                };
-                libeufin-nexusdb-postgres.CONFIG = "postgresql:///libeufin-nexus";
+          services.libeufin.nexus = {
+            enable = true;
+            debug = true;
+            settings = {
+              nexus-ebics = {
+                # == Mandatory ==
+                inherit CURRENCY;
+                # Bank
+                HOST_BASE_URL = "http://bank:8082/";
+                BANK_DIALECT = "postfinance";
+                # EBICS IDs
+                HOST_ID = "PFEBICS";
+                USER_ID = "PFC00563";
+                PARTNER_ID = "PFC00563";
+                # Account information
+                IBAN = "CH7789144474425692816";
+                BIC = "POFICHBEXXX";
+                NAME = "John Smith S.A.";
+
+                # == Optional ==
+                CLIENT_PRIVATE_KEYS_FILE = "/var/lib/libeufin-nexus/client-ebics-keys.json";
               };
+              libeufin-nexusdb-postgres.CONFIG = "postgresql:///libeufin-nexus";
             };
           };
           networking.firewall.enable = false;
@@ -116,35 +146,23 @@ import ../make-test-python.nix (
             pkgs.neovim
             pkgs.zellij
           ];
-          # TODO: for debugging. remove later
+          # Access WebUI from http://localhost:8082/
           virtualisation.forwardPorts = [
             {
               from = "host";
-              host.port = 4444; # socat
-              guest.port = 22;
-            }
-            {
-              from = "host";
-              host.port = 2222; # ssh
-              guest.port = 22;
+              host.port = 8082;
+              guest.port = 8082;
             }
           ];
-          services.openssh = {
-            enable = true;
-            settings = {
-              PermitRootLogin = "yes";
-              PermitEmptyPasswords = "yes";
-            };
-          };
-          security.pam.services.sshd.allowNullPassword = true;
         };
 
       client =
         { pkgs, ... }:
-        {
+        enableSSH 4444 {
           networking.firewall.enable = false;
           environment.systemPackages = [ pkgs.taler-wallet-core ];
         };
+
     };
 
     # TODO: split this into many separate tests
@@ -250,29 +268,52 @@ import ../make-test-python.nix (
 
             machine.log("systemd-run finished successfully")
 
+        # Wallet wrapper
+        def wallet_cli(command):
+            return client.succeed(
+                "taler-wallet-cli "
+                "--no-throttle "    # don't do any request throttling
+                + command
+            )
+
+        def verify_balance(balanceWanted):
+            balance = wallet_cli("balance --json")
+            try:
+                balanceGot = json.loads(balance)["balances"][0]["available"]
+            except:
+                balanceGot = "${CURRENCY}:0"
+
+            # Compare balance with expected value
+            if balanceGot != balanceWanted:
+                client.fail(f'echo Wanted balance: "{balanceWanted}", got: "{balanceGot}"')
+            else:
+                client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
+
+
         start_all()
+
 
         bank.wait_for_open_port(8082)
         exchange.wait_for_open_port(8081)
         merchant.wait_for_open_port(8083)
 
-        # Enable exchange wire account
+
         with subtest("Enable exchange wire account"):
             exchange.wait_until_succeeds("taler-exchange-offline download sign upload")
             exchange.succeed('taler-exchange-offline enable-account "payto://x-taler-bank/bank:8082/exchange?receiver-name=exchange" upload')
 
-        # Modify bank's admin account
+
         with subtest("Modify bank's admin account"):
             # Change password
-            systemd_run(bank, 'libeufin-bank passwd -c "${bankConfig}" "${AUSER}" "${APASS}"', "libeufin-bank")
+            systemd_run(bank, 'libeufin-bank passwd -c "${bankConfig}${AUSER}" "${APASS}"', "libeufin-bank")
 
             # Increase debit amount
             systemd_run(bank, 'libeufin-bank edit-account -c ${bankConfig} --debit_threshold="${bankSettings.CURRENCY}:1000000" ${AUSER}', "libeufin-bank")
 
-        # Check that bank can connect to exchange
+
         bank.succeed("curl -s http://exchange:8081/")
 
-        # Register bank accounts
+
         with subtest("Register bank accounts"):
         # NOTE: using hard-coded values from the testing API
         # TODO: add link to testing API
@@ -294,11 +335,14 @@ import ../make-test-python.nix (
               register_bank_account {
                 username = "merchant";
                 password = "merchant";
-                name = "Merchant Company";
+                name = "merchant";
               }
             }")
+            # WIP:
+            systemd_run(bank, 'libeufin-bank edit-account -c ${bankConfig} --debit_threshold="${bankSettings.CURRENCY}:1000000" exchange', "libeufin-bank")
+            systemd_run(bank, 'libeufin-bank edit-account -c ${bankConfig} --debit_threshold="${bankSettings.CURRENCY}:1000000" merchant', "libeufin-bank")
 
-        # Register default merchant instance (similar to admin)
+
         with subtest("Register merchant instances"):
             curl(merchant, [
                 "curl -X POST",
@@ -318,45 +362,47 @@ import ../make-test-python.nix (
                 """.replace("\n", ""),
                 "-sSfL 'http://merchant:8083/management/instances'"
             ])
+            # WIP:
             # Register bank account address
+            # curl(merchant, [
+            #     "curl -X POST",
+            #     "-H 'Content-Type: application/json'",
+            #     """
+            #     --data '{
+            #       "payto_uri": "payto://iban/DE5532534346932?receiver-name=nixMerchant",
+            #       "credit_facade_url": "https://bank.demo.taler.net/accounts/nixMerchant/taler-revenue/",
+            #       "credit_facade_credentials":{"type":"basic","username":"nixMerchant","password":"nixMerchant"}
+            #     }'
+            #     """.replace("\n", ""),
+            #     "-sSfL 'http://merchant:8083/private/accounts'"
+            # ])
             curl(merchant, [
                 "curl -X POST",
                 "-H 'Content-Type: application/json'",
                 """
                 --data '{
-                  "payto_uri": "payto://x-taler-bank/bank:8082/merchant?receiver-name=merchant"
+                  "payto_uri": "payto://x-taler-bank/bank:8082/merchant?receiver-name=merchant",
+                  "credit_facade_url": "http://localhost:8082/accounts/merchant/taler-revenue/",
+                  "credit_facade_credentials":{"type":"basic","username":"merchant","password":"merchant"}
                 }'
                 """.replace("\n", ""),
                 "-sSfL 'http://merchant:8083/private/accounts'"
             ])
 
-        # Check that client can connect to exchange
+
         client.succeed("curl -s http://exchange:8081/")
 
+
+        # WIP:
+        wallet_cli("""api --expect-success 'withdrawTestBalance' '{ "amount": "KUDOS:10", "corebankApiBaseUrl": "http://bank:8082/", "exchangeBaseUrl": "http://exchange:8081/" }'""")
+        wallet_cli("""api 'runIntegrationTestV2' '{"exchangeBaseUrl":"http://exchange:8081/", "corebankApiBaseUrl": "http://bank:8082/", "merchantBaseUrl": "https://merchant:8083/", "merchantAuthToken":"secret-token:sandbox"}'""")
+        wallet_cli("run-until-done")
+
+
+        breakpoint()
         # Make a withdrawal from the CLI wallet
         with subtest("Make a withdrawal from the CLI wallet"):
             balanceWanted = "${CURRENCY}:10"
-
-            # Wallet wrapper
-            def wallet_cli(command):
-                return client.succeed(
-                    "taler-wallet-cli "
-                    "--no-throttle "    # don't do any request throttling
-                    + command
-                )
-
-            def verify_balance(balanceWanted):
-                balance = wallet_cli("balance --json")
-                try:
-                    balanceGot = json.loads(balance)["balances"][0]["available"]
-                except:
-                    balanceGot = "${CURRENCY}:0"
-
-                # Compare balance with expected value
-                if got != wanted:
-                    client.fail(f'echo Wanted balance: "{balanceWanted}", got: "{balanceGot}"')
-                else:
-                    client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
 
             # Register exchange
             with subtest("Register exchange"):
@@ -390,7 +436,6 @@ import ../make-test-python.nix (
             verify_balance(balanceWanted)
 
 
-        breakpoint()
         with subtest("Pay for an order"):
             balanceWanted = "${CURRENCY}:9" # after paying
 
@@ -437,10 +482,11 @@ import ../make-test-python.nix (
             wallet_cli("run-until-done")
 
             # Process transaction
-            wallet_cli(f"handle-uri --withdrawal-exchange 'http://exchange:8081/' -y '{response["taler_pay_uri"]}'")
+            wallet_cli(f"handle-uri -y '{response["taler_pay_uri"]}'")
             wallet_cli("run-until-done")
 
             verify_balance(balanceWanted)
+
 
         # with subtest("Nexus fake incoming payment"):
         #     # Setup ebics keys
