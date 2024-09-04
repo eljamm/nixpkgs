@@ -139,13 +139,7 @@ import ../make-test-python.nix (
             };
           };
           networking.firewall.enable = false;
-          environment.systemPackages = [
-            pkgs.wget
-            config.services.libeufin.bank.package
-            # TODO: remove
-            pkgs.neovim
-            pkgs.zellij
-          ];
+          environment.systemPackages = [ config.services.libeufin.bank.package ];
           # Access WebUI from http://localhost:8082/
           virtualisation.forwardPorts = [
             {
@@ -190,30 +184,30 @@ import ../make-test-python.nix (
           }:
           let
             is_taler_exchange = lib.toLower username == "exchange";
-            BODY = {
-              inherit
-                username
-                password
-                name
-                is_taler_exchange
-                ;
-            };
+            BODY = lib.escapeShellArg (
+              lib.strings.toJSON {
+                inherit
+                  username
+                  password
+                  name
+                  is_taler_exchange
+                  ;
+              }
+            );
           in
           pkgs.writeShellScript "register_bank_account" ''
             # Modified from taler-unified-setup.sh
-            # https://git.taler.net/exchange.git/tree/src/testing/taler-unified-setup.sh?h=v0.11.2#n276
+            # https://git.taler.net/exchange.git/tree/src/testing/taler-unified-setup.sh
 
             set -eux
-            wget \
-              --http-user=${AUSER} \
-              --http-password=${APASS} \
-              --method=POST \
-              --header='Content-type: application/json' \
-              --body-data=${lib.escapeShellArg (lib.strings.toJSON BODY)} \
-              -o /dev/null \
-              -O /dev/null \
-              -a wget-register-account.log \
-              "http://bank:${toString bankSettings.PORT}/accounts"
+            curl \
+              -X POST \
+              -H "Content-type: application/json" \
+              -u ${AUSER}:${APASS} \
+              --data ${BODY} \
+              --silent \
+              --output /dev/null \
+              "http://bank:8082/accounts"
           '';
 
         nexus_fake_incoming = pkgs.writeShellScript "nexus_fake_incoming" ''
@@ -305,7 +299,7 @@ import ../make-test-python.nix (
 
         with subtest("Modify bank's admin account"):
             # Change password
-            systemd_run(bank, 'libeufin-bank passwd -c "${bankConfig}${AUSER}" "${APASS}"', "libeufin-bank")
+            systemd_run(bank, 'libeufin-bank passwd -c "${bankConfig}" "${AUSER}" "${APASS}"', "libeufin-bank")
 
             # Increase debit amount
             systemd_run(bank, 'libeufin-bank edit-account -c ${bankConfig} --debit_threshold="${bankSettings.CURRENCY}:1000000" ${AUSER}', "libeufin-bank")
@@ -394,12 +388,11 @@ import ../make-test-python.nix (
 
 
         # WIP:
-        wallet_cli("""api --expect-success 'withdrawTestBalance' '{ "amount": "KUDOS:10", "corebankApiBaseUrl": "http://bank:8082/", "exchangeBaseUrl": "http://exchange:8081/" }'""")
-        wallet_cli("""api 'runIntegrationTestV2' '{"exchangeBaseUrl":"http://exchange:8081/", "corebankApiBaseUrl": "http://bank:8082/", "merchantBaseUrl": "https://merchant:8083/", "merchantAuthToken":"secret-token:sandbox"}'""")
-        wallet_cli("run-until-done")
+        # wallet_cli("""api --expect-success 'withdrawTestBalance' '{ "amount": "KUDOS:10", "corebankApiBaseUrl": "http://bank:8082/", "exchangeBaseUrl": "http://exchange:8081/" }'""")
+        # wallet_cli("""api 'runIntegrationTestV2' '{"exchangeBaseUrl":"http://exchange:8081/", "corebankApiBaseUrl": "http://bank:8082/", "merchantBaseUrl": "https://merchant:8083/", "merchantAuthToken":"secret-token:sandbox"}'""")
+        # wallet_cli("run-until-done")
 
 
-        breakpoint()
         # Make a withdrawal from the CLI wallet
         with subtest("Make a withdrawal from the CLI wallet"):
             balanceWanted = "${CURRENCY}:10"
@@ -436,6 +429,7 @@ import ../make-test-python.nix (
             verify_balance(balanceWanted)
 
 
+        breakpoint()
         with subtest("Pay for an order"):
             balanceWanted = "${CURRENCY}:9" # after paying
 
