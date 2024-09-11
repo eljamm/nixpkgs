@@ -38,7 +38,7 @@ import ../make-test-python.nix (
               debug = true;
               settings.merchant-exchange-test = {
                 EXCHANGE_BASE_URL = "https://exchange.demo.taler.net/";
-                MASTER_KEY = "2TQSTPFZBC2MC4E52NHPA050YXYG02VC3AB50QESM6JX1QJEYVQ0";
+                MASTER_KEY = "F80MFRG8HVH6R9CQ47KRFQSJP3T6DBJ4K1D9B703RJY3Z39TBMJ0";
                 inherit CURRENCY;
               };
             };
@@ -76,7 +76,6 @@ import ../make-test-python.nix (
 
     };
 
-    # TODO: split into separate tests
     testScript = # python
       ''
         import json
@@ -180,13 +179,16 @@ import ../make-test-python.nix (
             wallet_cli("exchanges add https://exchange.demo.taler.net/")
             wallet_cli("exchanges accept-tos https://exchange.demo.taler.net/")
 
+        with subtest("Make a withdrawal from the CLI wallet"):
+            balanceWanted = "${CURRENCY}:10"
 
-        wallet_cli("""api --expect-success 'withdrawTestBalance' '{ "amount": "KUDOS:10", "corebankApiBaseUrl": "https://bank.demo.taler.net/", "exchangeBaseUrl": "https://exchange.demo.taler.net/" }'""")
-        wallet_cli("run-until-done")
+            wallet_cli("""api --expect-success 'withdrawTestBalance' '{ "amount": "KUDOS:10", "corebankApiBaseUrl": "https://bank.demo.taler.net/", "exchangeBaseUrl": "https://exchange.demo.taler.net/" }'""")
+            wallet_cli("run-until-done")
 
+            verify_balance(balanceWanted)
 
         with subtest("Pay for an order"):
-            balanceWanted = "${CURRENCY}:9" # after paying
+            balanceWanted = "${CURRENCY}:8.99" # 1 for order + 0.01 fees
 
             # Register a new product
             curl(merchant, [
@@ -231,12 +233,10 @@ import ../make-test-python.nix (
             wallet_cli("run-until-done")
 
             # Process transaction
-            wallet_cli(f"handle-uri -y '{response["taler_pay_uri"]}'")
+            wallet_cli(f"""handle-uri --withdrawal-exchange="https://exchange.demo.taler.net/" -y '{response["taler_pay_uri"]}'""")
             wallet_cli("run-until-done")
 
             verify_balance(balanceWanted)
-
-        breakpoint()
       '';
   }
 )
