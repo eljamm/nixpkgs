@@ -38,13 +38,17 @@ import ../make-test-python.nix (
               enable = true;
               debug = true;
               denominationConfig = lib.readFile ./conf/taler-denominations.conf;
-              enableAccounts = [ ./exchange-account.json ];
+              # enableAccounts = [ ./exchange-account.json ];
               settings.exchange = {
                 MASTER_PUBLIC_KEY = "2TQSTPFZBC2MC4E52NHPA050YXYG02VC3AB50QESM6JX1QJEYVQ0";
                 BASE_URL = "http://exchange:8081/";
               };
               settings.exchange-offline = {
                 MASTER_PRIV_FILE = "${./private.key}";
+              };
+              settings.exchangedb = {
+                IDLE_RESERVE_EXPIRATION_TIME = "4 weeks";
+                LEGAL_RESERVE_EXPIRATION_TIME = "7 years";
               };
             };
           };
@@ -107,10 +111,10 @@ import ../make-test-python.nix (
             debug = true;
             settings = {
               libeufin-bank = {
-                WIRE_TYPE = "x-taler-bank";
-                # WIRE_TYPE = "iban";
+                # WIRE_TYPE = "x-taler-bank";
+                WIRE_TYPE = "iban";
                 X_TALER_BANK_PAYTO_HOSTNAME = "bank:8082";
-                # IBAN_PAYTO_BIC = "SANDBOXX";
+                IBAN_PAYTO_BIC = "SANDBOXX";
 
                 # Allow creating new accounts
                 ALLOW_REGISTRATION = "yes";
@@ -297,7 +301,6 @@ import ../make-test-python.nix (
         def wallet_cli(command):
             return client.succeed(
                 "taler-wallet-cli "
-                "--no-throttle "    # don't do any request throttling
                 + command
             )
 
@@ -336,7 +339,7 @@ import ../make-test-python.nix (
             systemd_run(bank, 'libeufin-bank edit-account -c ${bankConfig} --debit_threshold="${bankSettings.CURRENCY}:1000000" ${AUSER}', "libeufin-bank")
 
 
-        bank.succeed("curl -s http://exchange:8081/")
+        bank.succeed("curl -s https://exchange.demo.taler.net/")
 
 
         with subtest("Register bank accounts"):
@@ -349,15 +352,9 @@ import ../make-test-python.nix (
                 name = "User42";
               }
             }")
-            bank.succeed("${
-              register_bank_account {
-                username = "exchange";
-                password = "exchange";
-                name = "Exchange";
-              }
-            }")
+            systemd_run(bank, 'libeufin-bank create-account -c ${bankConfig} --username exchange --password exchange --name Exchange --payto_uri="payto://iban/SANDBOXX/DE159593?receiver-name=Exchange" --exchange', "libeufin-bank")
             # TODO: need to specify the payto_uri for the merchant?
-            systemd_run(bank, 'libeufin-bank create-account -c ${bankConfig} --username merchant --password merchant --name Merchant --payto_uri="payto://x-taler-bank/bank:8082/merchant?receiver-name=Merchant"', "libeufin-bank")
+            systemd_run(bank, 'libeufin-bank create-account -c ${bankConfig} --username merchant --password merchant --name Merchant --payto_uri="payto://iban/SANDBOXX/CH7789144474425692816?receiver-name=Merchant"', "libeufin-bank")
 
 
         with subtest("Register merchant instances"):
@@ -379,26 +376,12 @@ import ../make-test-python.nix (
                 """.replace("\n", ""),
                 "-sSfL 'http://merchant:8083/management/instances'"
             ])
-            # WIP:
-            # Register bank account address
-            # curl(merchant, [
-            #     "curl -X POST",
-            #     "-H 'Content-Type: application/json'",
-            #     """
-            #     --data '{
-            #       "payto_uri": "payto://iban/DE5532534346932?receiver-name=nixMerchant",
-            #       "credit_facade_url": "https://bank.demo.taler.net/accounts/nixMerchant/taler-revenue/",
-            #       "credit_facade_credentials":{"type":"basic","username":"nixMerchant","password":"nixMerchant"}
-            #     }'
-            #     """.replace("\n", ""),
-            #     "-sSfL 'http://merchant:8083/private/accounts'"
-            # ])
             curl(merchant, [
                 "curl -X POST",
                 "-H 'Content-Type: application/json'",
                 """
                 --data '{
-                  "payto_uri": "payto://x-taler-bank/bank:8082/merchant?receiver-name=Merchant",
+                  "payto_uri": "payto://iban/SANDBOXX/CH7789144474425692816?receiver-name=Merchant",
                   "credit_facade_url": "http://bank:8082/accounts/merchant/taler-revenue/",
                   "credit_facade_credentials":{"type":"basic","username":"merchant","password":"merchant"}
                 }'
@@ -413,89 +396,66 @@ import ../make-test-python.nix (
         with subtest("Make a withdrawal from the CLI wallet"):
             balanceWanted = "${CURRENCY}:10"
 
-            # Register exchange
-            with subtest("Register exchange"):
-                wallet_cli("exchanges add http://exchange:8081/")
-                wallet_cli("exchanges accept-tos http://exchange:8081/")
+            wallet_cli("exchanges add https://exchange.demo.taler.net/")
+            wallet_cli("exchanges accept-tos https://exchange.demo.taler.net/")
 
-            # Request withdrawal from the bank
-            withdrawal = json.loads(
-                curl(client, [
-                    "curl -X POST",
-                    "-u ${TUSER}:${TPASS}",
-                    "-H 'Content-Type: application/json'",
-                    f"""--data '{{"amount": "{balanceWanted}"}}'""", # double brackets escapes them
-                    "-sSfL 'http://bank:8082/accounts/${TUSER}/withdrawals'"
-                ])
-            )
+            wallet_cli("""api --expect-success 'withdrawTestBalance' '{ "amount": "KUDOS:10", "corebankApiBaseUrl": "http://bank:8082/", "exchangeBaseUrl": "http://exchange:8081/" }'""")
 
-            # Accept & confirm withdrawal
-            with subtest("Accept & confirm withdrawal"):
-                wallet_cli(f"withdraw accept-uri {withdrawal["taler_withdraw_uri"]} --exchange http://exchange:8081/")
-                curl(client, [
-                    "curl -X POST",
-                    "-u ${TUSER}:${TPASS}",
-                    "-H 'Content-Type: application/json'",
-                    f"-sSfL 'http://bank:8082/accounts/${TUSER}/withdrawals/{withdrawal["withdrawal_id"]}/confirm'"
-                ])
-
-            # Process transactions
             wallet_cli("run-until-done")
 
             verify_balance(balanceWanted)
 
 
-        breakpoint()
-        with subtest("Pay for an order"):
-            balanceWanted = "${CURRENCY}:9" # after paying
+        balanceWanted = "${CURRENCY}:9" # after paying
 
-            # Register a new product
+        # Register a new product
+        curl(merchant, [
+            "curl -X POST",
+            "-H 'Content-Type: application/json'",
+            """
+            --data '{
+              "product_id": "1",
+              "description": "Product with id 1 and price 1",
+              "price": "KUDOS:1",
+              "total_stock": 20,
+              "unit": "packages",
+              "next_restock": { "t_s": "never" }
+            }'
+            """.replace("\n", ""),
+            "-sSfL 'http://merchant:8083/private/products'"
+        ])
+        breakpoint()
+        # Create an order to be paid
+        response = json.loads(
             curl(merchant, [
                 "curl -X POST",
                 "-H 'Content-Type: application/json'",
                 """
                 --data '{
-                  "product_id": "1",
-                  "description": "Product with id 1 and price 1",
-                  "price": "KUDOS:1",
-                  "total_stock": 20,
-                  "unit": "packages",
-                  "next_restock": { "t_s": "never" }
+                  "order": { "amount": "KUDOS:1", "summary": "Test Order" },
+                  "inventory_products": [{ "product_id": "1", "quantity": 1 }]
                 }'
                 """.replace("\n", ""),
-                "-sSfL 'http://merchant:8083/private/products'"
+                "-sSfL 'http://merchant:8083/private/orders'"
             ])
-            # Create an order to be paid
-            response = json.loads(
-                curl(merchant, [
-                    "curl -X POST",
-                    "-H 'Content-Type: application/json'",
-                    """
-                    --data '{
-                      "order": { "amount": "KUDOS:1", "summary": "Test Order" },
-                      "inventory_products": [{ "product_id": "1", "quantity": 1 }]
-                    }'
-                    """.replace("\n", ""),
-                    "-sSfL 'http://merchant:8083/private/orders'"
-                ])
-            )
-            order_id = response["order_id"]
-            token = response["token"]
+        )
+        order_id = response["order_id"]
+        token = response["token"]
 
-            # Get order pay URI
-            response = json.loads(
-                curl(merchant, [
-                    "curl -sSfL",
-                    f"http://merchant:8083/private/orders/{order_id}"
-                ])
-            )
-            wallet_cli("run-until-done")
+        # Get order pay URI
+        response = json.loads(
+            curl(merchant, [
+                "curl -sSfL",
+                f"http://merchant:8083/private/orders/{order_id}"
+            ])
+        )
+        wallet_cli("run-until-done")
 
-            # Process transaction
-            wallet_cli(f"""handle-uri --withdrawal-exchange="http://exchange:8081/" -y '{response["taler_pay_uri"]}'""")
-            wallet_cli("run-until-done")
+        # Process transaction
+        wallet_cli(f"""handle-uri --withdrawal-exchange="https://exchange.demo.taler.net/" -y '{response["taler_pay_uri"]}'""")
+        wallet_cli("run-until-done")
 
-            verify_balance(balanceWanted)
+        verify_balance(balanceWanted)
 
 
         # with subtest("Nexus fake incoming payment"):

@@ -2,15 +2,15 @@
   {
     "operation": "exchange-enable-wire-0",
     "arguments": {
-      "payto_uri": "payto://x-taler-bank/bank:8082/exchange?receiver-name=Exchange",
+      "payto_uri": "payto://iban/SANDBOXX/DE159593?receiver-name=Exchange",
       "debit_restrictions": [],
       "credit_restrictions": [],
       "priority": 0,
       "validity_start": {
-        "t_s": 1725886541
+        "t_s": 1726050483
       },
-      "master_sig_add": "68WDT3JX1S5GQ9D3RZWXQVZK9AHFZ46YY5DA993720YA3SCBR4SW3X09NH5DECTXGWBKSN0MGKE1ANA9QZ95SKSNYPS9T9G46PCJC20",
-      "master_sig_wire": "39CEN9007DEXXMSDFZX1R2YYNANZYAFHX4EZC4ZX3C8DQEYT83JNVCVYMWYDGWEX6S891ZPXD6QHJE9J41YV9EN703Q0NM0MVE4FP18"
+      "master_sig_add": "TE0VQ0VB0RK3JFXZYM6S9R3BN34C87RTVB1FJG94XKZ1TJAXB6XZ9HSTMSRNBECEHHDMFJ7K04E8J9ZHY4TSCT617HCFESJXPA8Z02G",
+      "master_sig_wire": "9D1H1NVFTED3PQF23WBST867ZV2X431TF3X18H7RHSTZQYH0HNFT69CX91CEQH3VJ7HTM6M66GWJ4JV3RNB19MSDT4M8VGR29XFYR20"
     }
   }
 ]
