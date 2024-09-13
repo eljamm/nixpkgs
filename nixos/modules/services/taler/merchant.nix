@@ -24,7 +24,7 @@ let
   dbName = "taler-merchant-httpd";
   groupName = "taler-merchant-services";
   # TODO: probably uneeded since there are no crypto helpers. To verify
-  runtimeDir = "/run/taler-system-runtime/";
+  inherit (config.services.taler) runtimeDir;
 in
 
 {

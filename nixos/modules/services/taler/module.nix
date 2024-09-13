@@ -7,7 +7,7 @@
 
 let
   settingsFormat = pkgs.formats.ini { };
-  this = config.services.taler;
+  cfg = config.services.taler;
 in
 
 {
@@ -28,9 +28,9 @@ in
       default =
         let
           includes = pkgs.writers.writeText "includes.conf" (
-            lib.concatStringsSep "\n" (map (include: "@inline@ ${include}") this.includes)
+            lib.concatStringsSep "\n" (map (include: "@inline@ ${include}") cfg.includes)
           );
-          generatedConfig = settingsFormat.generate "generated-taler.conf" this.settings;
+          generatedConfig = settingsFormat.generate "generated-taler.conf" cfg.settings;
         in
         pkgs.runCommand "taler.conf" { } ''
           cat ${includes} > $out
@@ -64,7 +64,7 @@ in
             TALER_RUNTIME_DIR = lib.mkOption {
               type = lib.types.str;
               internal = true;
-              default = "/run/taler-system-runtime/";
+              default = cfg.runtimeDir;
             };
           };
           taler = {
@@ -78,7 +78,7 @@ in
             };
             CURRENCY_ROUND_UNIT = lib.mkOption {
               type = lib.types.str;
-              default = "${this.settings.taler.CURRENCY}:0.01";
+              default = "${cfg.settings.taler.CURRENCY}:0.01";
               defaultText = "0.01 in {option}`CURRENCY`";
               description = ''
                 Smallest amount in this currency that can be transferred using the underlying RTGS.
@@ -91,7 +91,17 @@ in
       };
       default = { };
     };
+    runtimeDir = lib.mkOption {
+      type = lib.types.str;
+      default = "/run/taler-system-runtime/";
+      description = ''
+        Runtime directory shared between the taler services.
+
+        Crypto helpers put their sockets here for instance and the httpd
+        connects to them.
+      '';
+    };
   };
 
-  config = lib.mkIf this.enable { environment.etc."taler/taler.conf".source = this.configFile; };
+  config = lib.mkIf cfg.enable { environment.etc."taler/taler.conf".source = cfg.configFile; };
 }

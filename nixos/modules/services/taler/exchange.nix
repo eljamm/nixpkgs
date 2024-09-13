@@ -7,7 +7,8 @@
 }:
 
 let
-  cfg = config.services.taler.exchange;
+  cfg = cfgTaler.exchange;
+  cfgTaler = config.services.taler;
   # Services that need access to the DB
   # https://docs.taler.net/taler-exchange-manual.html#services-users-groups-and-file-system-hierarchy
   servicesDB = [
@@ -25,9 +26,7 @@ let
   services = servicesDB ++ servicesNoDB;
   dbName = "taler-exchange-httpd";
   groupName = "taler-exchange-services";
-  # taler-exchange needs a runtime dir shared between the taler services. Crypto
-  # helpers put their sockets here for instance and the httpd connects to them.
-  runtimeDir = "/run/taler-system-runtime/";
+  inherit (cfgTaler) runtimeDir;
 in
 
 {
@@ -78,7 +77,7 @@ in
           exchange = {
             AML_THRESHOLD = lib.mkOption {
               type = lib.types.str;
-              default = "${config.services.taler.settings.taler.CURRENCY}:1000000";
+              default = "${cfgTaler.settings.taler.CURRENCY}:1000000";
               defaultText = "1000000 in {option}`CURRENCY`";
               description = "Monthly transaction volume until an account is considered suspicious and flagged for AML review.";
             };
@@ -153,7 +152,7 @@ in
           Group = groupName;
           ExecStart = toString [
             (lib.getExe' cfg.package name)
-            "-c ${config.services.taler.configFile}"
+            "-c ${cfgTaler.configFile}"
             (lib.optionalString cfg.debug " -L debug")
           ];
           RuntimeDirectory = name;
