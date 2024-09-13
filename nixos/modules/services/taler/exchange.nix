@@ -7,7 +7,7 @@
 }:
 
 let
-  this = config.services.taler.exchange;
+  cfg = config.services.taler.exchange;
   # Services that need access to the DB
   # https://docs.taler.net/taler-exchange-manual.html#services-users-groups-and-file-system-hierarchy
   servicesDB = [
@@ -134,10 +134,10 @@ in
     };
   };
 
-  config = lib.mkIf this.enable {
+  config = lib.mkIf cfg.enable {
     services.taler = {
-      inherit (this) enable settings;
-      includes = [ (pkgs.writers.writeText "exchange-denominations.conf" this.denominationConfig) ];
+      inherit (cfg) enable settings;
+      includes = [ (pkgs.writers.writeText "exchange-denominations.conf" cfg.denominationConfig) ];
     };
 
     systemd.slices.taler-exchange = {
@@ -151,9 +151,11 @@ in
           DynamicUser = true;
           User = name;
           Group = groupName;
-          ExecStart =
-            "${lib.getExe' this.package name} -c ${config.services.taler.configFile}"
-            + lib.optionalString this.debug " -L debug";
+          ExecStart = toString [
+            (lib.getExe' cfg.package name)
+            "-c ${config.services.taler.configFile}"
+            (lib.optionalString cfg.debug " -L debug")
+          ];
           RuntimeDirectory = name;
           StateDirectory = name;
           CacheDirectory = name;
@@ -185,8 +187,7 @@ in
               '';
             in
             ''
-              ${lib.getExe' this.package "taler-exchange-dbinit"}
-
+              ${lib.getExe' cfg.package "taler-exchange-dbinit"}
               psql -f ${dbScript}
             '';
           requires = [ "postgresql.service" ];
@@ -202,8 +203,8 @@ in
         taler-exchange-accounts = {
           script = lib.concatStringsSep "\n" (
             map (
-              account: "${lib.getExe' this.package "taler-exchange-offline"} upload < ${account}"
-            ) this.enableAccounts
+              account: "${lib.getExe' cfg.package "taler-exchange-offline"} upload < ${account}"
+            ) cfg.enableAccounts
           );
           requires = [ "taler-exchange-httpd.service" ];
           after = [ "taler-exchange-httpd.service" ];

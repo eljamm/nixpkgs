@@ -7,7 +7,7 @@
 }:
 
 let
-  this = config.services.taler.merchant;
+  cfg = config.services.taler.merchant;
   # Services that need access to the DB
   # https://docs.taler.net/taler-merchant-manual.html#launching-the-backend
   servicesDB = [
@@ -78,7 +78,7 @@ in
             SQL_DIR = lib.mkOption {
               type = lib.types.str;
               internal = true;
-              default = "${this.package}/share/taler/sql/merchant/";
+              default = "${cfg.package}/share/taler/sql/merchant/";
               description = "The location for the SQL files to setup the database tables.";
             };
           };
@@ -90,9 +90,9 @@ in
     # see https://docs.taler.net/manpages/taler.conf.5.html#known-exchanges-for-merchants
   };
 
-  config = lib.mkIf this.enable {
+  config = lib.mkIf cfg.enable {
     services.taler = {
-      inherit (this) enable settings;
+      inherit (cfg) enable settings;
     };
 
     systemd.slices.taler-merchant = {
@@ -105,14 +105,16 @@ in
       lib.genAttrs (map (n: "taler-merchant-${n}") services) (name: {
         # taler-merchant-depositcheck needs its executable is in the PATH
         # NOTE: Couldn't use `lib.getExe` to only get that single executable
-        path = lib.optional (name == "taler-merchant-depositcheck") this.package;
+        path = lib.optional (name == "taler-merchant-depositcheck") cfg.package;
         serviceConfig = {
           DynamicUser = true;
           User = name;
           Group = groupName;
-          ExecStart =
-            "${lib.getExe' this.package name} -c ${config.services.taler.configFile}"
-            + lib.optionalString this.debug " -L debug";
+          ExecStart = toString [
+            (lib.getExe' cfg.package name)
+            "-c ${config.services.taler.configFile}"
+            (lib.optionalString cfg.debug " -L debug")
+          ];
           RuntimeDirectory = name;
           StateDirectory = name;
           CacheDirectory = name;
@@ -144,8 +146,7 @@ in
               );
             in
             ''
-              ${lib.getExe' this.package "taler-merchant-dbinit"}
-
+              ${lib.getExe' cfg.package "taler-merchant-dbinit"}
               psql -f ${dbScript}
             '';
           requires = [ "postgresql.service" ];
