@@ -6,7 +6,7 @@
   ...
 }:
 let
-  this = config.services.libeufin.bank;
+  cfg = config.services.libeufin.bank;
   bankServiceName = "libeufin-bank";
   dbinitServiceName = "libeufin-bank-dbinit";
   inherit (config.services.libeufin) configFile;
@@ -78,9 +78,9 @@ in
     };
   };
 
-  config = lib.mkIf this.enable {
+  config = lib.mkIf cfg.enable {
     services.libeufin = {
-      inherit (this) enable settings;
+      inherit (cfg) enable settings;
     };
 
     systemd.services = {
@@ -88,8 +88,11 @@ in
         serviceConfig = {
           DynamicUser = true;
           User = bankServiceName;
-          ExecStart =
-            "${lib.getExe this.package} serve -c ${configFile}" + lib.optionalString this.debug " -L debug";
+          ExecStart = toString [
+            (lib.getExe' cfg.package "libeufin-bank")
+            "serve -c ${configFile}"
+            (lib.optionalString cfg.debug " -L debug")
+          ];
         };
         requires = [ "${dbinitServiceName}.service" ];
         after = [ "${dbinitServiceName}.service" ];
@@ -97,12 +100,15 @@ in
       };
       ${dbinitServiceName} = {
         path = [ config.services.postgresql.package ];
-        script =
-          "${lib.getExe this.package} dbinit -c ${configFile}" + lib.optionalString this.debug " -L debug";
         serviceConfig = {
           Type = "oneshot";
           DynamicUser = true;
           User = bankServiceName;
+          ExecStart = toString [
+            (lib.getExe' cfg.package "libeufin-bank")
+            "dbinit -c ${configFile}"
+            (lib.optionalString cfg.debug " -L debug")
+          ];
         };
         requires = [ "postgresql.service" ];
         after = [ "postgresql.service" ];

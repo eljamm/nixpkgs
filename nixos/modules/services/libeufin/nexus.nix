@@ -7,7 +7,7 @@
 }:
 # TODO: refactor shared code with the bank
 let
-  this = config.services.libeufin.nexus;
+  cfg = config.services.libeufin.nexus;
   serviceName = "libeufin-nexus";
   dbinitServiceName = "libeufin-nexus-dbinit";
   inherit (config.services.libeufin) configFile;
@@ -125,40 +125,44 @@ in
     };
   };
 
-  config = lib.mkIf this.enable {
+  config = lib.mkIf cfg.enable {
     services.libeufin = {
-      inherit (this) enable settings;
+      inherit (cfg) enable settings;
     };
 
-    systemd.services =
-      let
-        nexusExe = "${lib.getExe' this.package serviceName}";
-      in
-      {
-        ${serviceName} = {
-          serviceConfig = {
-            DynamicUser = true;
-            User = serviceName;
-            ExecStart = "${nexusExe} serve -c ${configFile}" + lib.optionalString this.debug " -L debug";
-            StateDirectory = serviceName;
-            ReadWritePaths = [ "/var/lib/${serviceName}" ];
-          };
-          requires = [ "${dbinitServiceName}.service" ];
-          after = [ "${dbinitServiceName}.service" ];
-          wantedBy = [ "multi-user.target" ]; # TODO slice?
+    systemd.services = {
+      ${serviceName} = {
+        serviceConfig = {
+          DynamicUser = true;
+          User = serviceName;
+          ExecStart = toString [
+            (lib.getExe' cfg.package "libeufin-nexus")
+            "-c ${configFile}"
+            (lib.optionalString cfg.debug " -L debug")
+          ];
+          StateDirectory = serviceName;
+          ReadWritePaths = [ "/var/lib/${serviceName}" ];
         };
-        ${dbinitServiceName} = {
-          path = [ config.services.postgresql.package ];
-          script = "${nexusExe} dbinit -c ${configFile}" + lib.optionalString this.debug " -L debug";
-          serviceConfig = {
-            Type = "oneshot";
-            DynamicUser = true;
-            User = serviceName;
-          };
-          requires = [ "postgresql.service" ];
-          after = [ "postgresql.service" ];
-        };
+        requires = [ "${dbinitServiceName}.service" ];
+        after = [ "${dbinitServiceName}.service" ];
+        wantedBy = [ "multi-user.target" ]; # TODO slice?
       };
+      ${dbinitServiceName} = {
+        path = [ config.services.postgresql.package ];
+        serviceConfig = {
+          Type = "oneshot";
+          DynamicUser = true;
+          User = serviceName;
+          ExecStart = toString [
+            (lib.getExe' cfg.package "libeufin-nexus")
+            "dbinit -c ${configFile}"
+            (lib.optionalString cfg.debug " -L debug")
+          ];
+        };
+        requires = [ "postgresql.service" ];
+        after = [ "postgresql.service" ];
+      };
+    };
 
     services.postgresql.enable = true;
     services.postgresql.ensureDatabases = [ serviceName ];
