@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ lib, pkgs, ... }:
 let
   CURRENCY = "KUDOS";
 
@@ -178,6 +178,38 @@ in
             from = "host";
             host.port = 4444;
             guest.port = 22;
+          }
+        ];
+      };
+
+    depolymerization =
+      { config, lib, ... }:
+      enableSSH {
+        services.taler = {
+          settings.taler.CURRENCY = "BITCOINBTC";
+          depolymerization = {
+            enable = true;
+            debug = true;
+            settings = {
+              depolymerizer-bitcoin = {
+                AUTH_METHOD = "basic";
+                AUTH_TOKEN = "YWRtaW46cGFzc3dvcmQ=";
+              };
+            };
+          };
+        };
+        networking.firewall.enable = false;
+        # Access from http://localhost:8084/
+        virtualisation.forwardPorts = [
+          {
+            from = "host";
+            host.port = 5555;
+            guest.port = 22;
+          }
+          {
+            from = "host";
+            host.port = 8084;
+            guest.port = 8084;
           }
         ];
       };
