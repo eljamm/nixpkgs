@@ -181,6 +181,32 @@ in
           }
         ];
       };
+
+    depolymerization =
+      { config, lib, ... }:
+      enableSSH {
+        services.taler = {
+          settings.taler.CURRENCY = "BITCOINBTC";
+          depolymerization = {
+            enable = false;
+            debug = true;
+          };
+        };
+        networking.firewall.enable = false;
+        # Access from http://localhost:8084/
+        virtualisation.forwardPorts = [
+          {
+            from = "host";
+            host.port = 5555;
+            guest.port = 22;
+          }
+          {
+            from = "host";
+            host.port = 8084;
+            guest.port = 8084;
+          }
+        ];
+      };
   };
 
 }
