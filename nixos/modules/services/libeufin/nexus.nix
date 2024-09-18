@@ -137,7 +137,7 @@ in
           User = serviceName;
           ExecStart = toString [
             (lib.getExe' cfg.package "libeufin-nexus")
-            "-c ${configFile}"
+            "serve -c ${configFile}"
             (lib.optionalString cfg.debug " -L debug")
           ];
           StateDirectory = serviceName;
