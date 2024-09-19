@@ -2,6 +2,7 @@
 let
   CURRENCY = "KUDOS";
 
+  # TODO: improve so we don't have to manually forward ssh port
   # Enable SSH on machine, recursively merge with settings
   #
   # Connect with: ssh root@localhost -p <hostPort>
@@ -182,13 +183,14 @@ in
         ];
       };
 
+    # TODO: still does not work properly
     depolymerization =
       { config, lib, ... }:
       enableSSH {
         services.taler = {
           settings.taler.CURRENCY = "BITCOINBTC";
           depolymerization = {
-            enable = false;
+            enable = false; # TODO
             debug = true;
           };
         };

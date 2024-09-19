@@ -1,14 +1,16 @@
 import ../make-test-python.nix (
   { pkgs, lib, ... }:
   {
-    name = "taler";
+    name = "Taler Basic Test";
     meta = {
       maintainers = [ ];
     };
 
+    # Configuration for for Taler components' virtual-machine nodes
     inherit (pkgs.callPackage ./common/nodes.nix { inherit lib; }) nodes;
 
-    # TODO: split into separate tests
+    # TODO: make separate tests (i.e. for each component)?
+    # TODO: move common scripts/functions into separate file to be re-used by tests
     testScript =
       { nodes, ... }:
       let
@@ -86,9 +88,11 @@ import ../make-test-python.nix (
         import json
 
         # Join curl commands
-        # TODO: add option to fail on unexpected return code?
+        # TODO: add option for expected return code or is `succeed()` and `fail()` enough?
         def curl(machine, commands):
-            return machine.succeed(" ".join(commands))
+            # flatten multi-line commands
+            flattened_commands = [c.replace("\n", "") for c in commands]
+            return machine.succeed(" ".join(flattened_commands))
 
         # Execute command as systemd DynamicUser
         def systemd_run(machine, cmd, user="nobody", group="nobody"):
@@ -138,6 +142,7 @@ import ../make-test-python.nix (
         start_all()
 
 
+        # TODO: use `wait_for_unit` instead?
         bank.wait_for_open_port(8082)
         exchange.wait_for_open_port(8081)
         merchant.wait_for_open_port(8083)
@@ -151,22 +156,20 @@ import ../make-test-python.nix (
         with subtest("Modify bank's admin account"):
             # Change password
             systemd_run(bank, 'libeufin-bank passwd -c "${bankConfig}" "${AUSER}" "${APASS}"', "libeufin-bank")
-
             # Increase debit amount
             systemd_run(bank, 'libeufin-bank edit-account -c ${bankConfig} --debit_threshold="${bankSettings.CURRENCY}:1000000" ${AUSER}', "libeufin-bank")
 
 
-        bank.succeed("curl -s http://exchange:8081/")
+        # Verify that exchange keys exist
+        bank.succeed("curl -s http://exchange:8081/keys")
 
 
         with subtest("Register bank accounts"):
-        # NOTE: using hard-coded values from the testing API
-        # TODO: add link to testing API
             bank.succeed("${
               register_bank_account {
                 username = "${TUSER}";
                 password = "${TPASS}";
-                name = "User42";
+                name = "User";
               }
             }")
             bank.succeed("${
@@ -180,7 +183,8 @@ import ../make-test-python.nix (
             systemd_run(bank, 'libeufin-bank create-account -c ${bankConfig} --username merchant --password merchant --name Merchant --payto_uri="payto://x-taler-bank/bank:8082/merchant?receiver-name=Merchant"', "libeufin-bank")
 
 
-        with subtest("Register merchant instances"):
+        with subtest("Set up merchant"):
+            # Create default instance (similar to admin)
             curl(merchant, [
                 "curl -X POST",
                 "-H 'Authorization: Bearer secret-token:super_secret'",
@@ -196,23 +200,10 @@ import ../make-test-python.nix (
                   "default_wire_transfer_delay": { "d_us": 3600000000 },
                   "default_pay_delay": { "d_us": 3600000000 }
                 }'
-                """.replace("\n", ""),
+                """,
                 "-sSfL 'http://merchant:8083/management/instances'"
             ])
-            # WIP:
             # Register bank account address
-            # curl(merchant, [
-            #     "curl -X POST",
-            #     "-H 'Content-Type: application/json'",
-            #     """
-            #     --data '{
-            #       "payto_uri": "payto://iban/DE5532534346932?receiver-name=nixMerchant",
-            #       "credit_facade_url": "https://bank.demo.taler.net/accounts/nixMerchant/taler-revenue/",
-            #       "credit_facade_credentials":{"type":"basic","username":"nixMerchant","password":"nixMerchant"}
-            #     }'
-            #     """.replace("\n", ""),
-            #     "-sSfL 'http://merchant:8083/private/accounts'"
-            # ])
             curl(merchant, [
                 "curl -X POST",
                 "-H 'Content-Type: application/json'",
@@ -222,8 +213,24 @@ import ../make-test-python.nix (
                   "credit_facade_url": "http://bank:8082/accounts/merchant/taler-revenue/",
                   "credit_facade_credentials":{"type":"basic","username":"merchant","password":"merchant"}
                 }'
-                """.replace("\n", ""),
+                """,
                 "-sSfL 'http://merchant:8083/private/accounts'"
+            ])
+            # Register a new product to be ordered
+            curl(merchant, [
+                "curl -X POST",
+                "-H 'Content-Type: application/json'",
+                """
+                --data '{
+                  "product_id": "1",
+                  "description": "Product with id 1 and price 1",
+                  "price": "KUDOS:1",
+                  "total_stock": 20,
+                  "unit": "packages",
+                  "next_restock": { "t_s": "never" }
+                }'
+                """,
+                "-sSfL 'http://merchant:8083/private/products'"
             ])
 
 
@@ -266,25 +273,10 @@ import ../make-test-python.nix (
 
 
         breakpoint()
+        # FIX: `insufficient balance` error while trying to pay for order
         with subtest("Pay for an order"):
             balanceWanted = "${CURRENCY}:9" # after paying
 
-            # Register a new product
-            curl(merchant, [
-                "curl -X POST",
-                "-H 'Content-Type: application/json'",
-                """
-                --data '{
-                  "product_id": "1",
-                  "description": "Product with id 1 and price 1",
-                  "price": "KUDOS:1",
-                  "total_stock": 20,
-                  "unit": "packages",
-                  "next_restock": { "t_s": "never" }
-                }'
-                """.replace("\n", ""),
-                "-sSfL 'http://merchant:8083/private/products'"
-            ])
             # Create an order to be paid
             response = json.loads(
                 curl(merchant, [
@@ -295,7 +287,7 @@ import ../make-test-python.nix (
                       "order": { "amount": "KUDOS:1", "summary": "Test Order" },
                       "inventory_products": [{ "product_id": "1", "quantity": 1 }]
                     }'
-                    """.replace("\n", ""),
+                    """,
                     "-sSfL 'http://merchant:8083/private/orders'"
                 ])
             )
@@ -318,10 +310,10 @@ import ../make-test-python.nix (
             verify_balance(balanceWanted)
 
 
+        # TODO:
         # with subtest("Nexus fake incoming payment"):
         #     # Setup ebics keys
         #     bank.succeed("libeufin-nexus ebics-setup -L debug -c ${bankConfig}")
-        #
         #     # Make fake transaction
         #     systemd_run(bank, "${nexus_fake_incoming}", "libeufin-nexus")
         #     wallet_cli("run-until-done")

@@ -20,7 +20,7 @@ import ../make-test-python.nix (
       } settings;
   in
   {
-    name = "taler";
+    name = "Taler Online Demo Test";
     meta = {
       maintainers = [ ];
     };
