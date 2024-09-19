@@ -2,6 +2,7 @@
 let
   CURRENCY = "KUDOS";
 
+  # TODO: improve so we don't have to manually forward ssh port
   # Enable SSH on machine, recursively merge with settings
   #
   # Connect with: ssh root@localhost -p <hostPort>
@@ -105,6 +106,7 @@ in
               # WIRE_TYPE = "iban";
               X_TALER_BANK_PAYTO_HOSTNAME = "bank:8082";
               # IBAN_PAYTO_BIC = "SANDBOXX";
+              BASE_URL = "bank:8082";
 
               # Allow creating new accounts
               ALLOW_REGISTRATION = "yes";
@@ -117,7 +119,7 @@ in
               DEFAULT_DEBT_LIMIT = "${CURRENCY}:500";
 
               # ALLOW_CONVERSION = "yes";
-              # ALLOW_EDIT_CASHOUT_PAYTO_URI = "yes";
+              ALLOW_EDIT_CASHOUT_PAYTO_URI = "yes";
 
               SUGGESTED_WITHDRAWAL_EXCHANGE = "http://exchange:8081/";
 
@@ -182,6 +184,7 @@ in
         ];
       };
 
+    # TODO: still does not work properly
     depolymerization =
       { config, lib, ... }:
       enableSSH {
