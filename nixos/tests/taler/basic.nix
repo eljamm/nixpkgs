@@ -28,41 +28,6 @@ import ../make-test-python.nix (
         TUSER = "testUser";
         TPASS = "testUser";
 
-        # TODO: Move scripts to separate directory?
-        register_bank_account =
-          {
-            username,
-            password,
-            name,
-          }:
-          let
-            is_taler_exchange = lib.toLower username == "exchange";
-            BODY = lib.escapeShellArg (
-              lib.strings.toJSON {
-                inherit
-                  username
-                  password
-                  name
-                  is_taler_exchange
-                  ;
-              }
-            );
-          in
-          pkgs.writeShellScript "register_bank_account" ''
-            # Modified from taler-unified-setup.sh
-            # https://git.taler.net/exchange.git/tree/src/testing/taler-unified-setup.sh
-
-            set -eux
-            curl \
-              -X POST \
-              -H "Content-type: application/json" \
-              -u ${AUSER}:${APASS} \
-              --data ${BODY} \
-              --silent \
-              --output /dev/null \
-              "http://bank:8082/accounts"
-          '';
-
         nexus_fake_incoming = pkgs.writeShellScript "nexus_fake_incoming" ''
           set -eux
           RESERVE_PUB=$(
@@ -117,6 +82,19 @@ import ../make-test-python.nix (
 
             machine.log("systemd-run finished successfully")
 
+        def register_bank_account(username, password, name, is_exchange=False):
+            return systemd_run(bank, " ".join([
+                'libeufin-bank',
+                'create-account',
+                '-c ${bankConfig}',
+                f'--username {username}',
+                f'--password {password}',
+                f'--name {name}',
+                f'--payto_uri="payto://x-taler-bank/bank:8082/{username}?receiver-name={name}"',
+                '--exchange' if (is_exchange or username.lower()=="exchange") else ' '
+                ]),
+                user="libeufin-bank")
+
         # Wallet wrapper
         def wallet_cli(command):
             return client.succeed(
@@ -139,18 +117,8 @@ import ../make-test-python.nix (
                 client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
 
 
-        start_all()
-
-
-        # TODO: use `wait_for_unit` instead?
+        bank.start()
         bank.wait_for_open_port(8082)
-        exchange.wait_for_open_port(8081)
-        merchant.wait_for_open_port(8083)
-
-
-        with subtest("Enable exchange wire account"):
-            exchange.wait_until_succeeds("taler-exchange-offline download sign upload")
-            exchange.succeed('taler-exchange-offline upload < ${./conf/exchange-account.json}')
 
 
         with subtest("Modify bank's admin account"):
@@ -160,27 +128,26 @@ import ../make-test-python.nix (
             systemd_run(bank, 'libeufin-bank edit-account -c ${bankConfig} --debit_threshold="${bankSettings.CURRENCY}:1000000" ${AUSER}', "libeufin-bank")
 
 
+        # register_bank_account(username, password, name)
+        with subtest("Register bank accounts"):
+            register_bank_account("testUser", "testUser", "User")
+            register_bank_account("exchange", "exchange", "Exchange")
+            register_bank_account("merchant", "merchant", "Merchant")
+
+
+        start_all()
+
+        exchange.wait_for_open_port(8081)
+        merchant.wait_for_open_port(8083)
+
+
+        with subtest("Enable exchange wire account"):
+            exchange.wait_until_succeeds("taler-exchange-offline download sign upload")
+            exchange.wait_until_succeeds('taler-exchange-offline upload < ${./conf/exchange-account.json}')
+
+
         # Verify that exchange keys exist
         bank.succeed("curl -s http://exchange:8081/keys")
-
-
-        with subtest("Register bank accounts"):
-            bank.succeed("${
-              register_bank_account {
-                username = "${TUSER}";
-                password = "${TPASS}";
-                name = "User";
-              }
-            }")
-            bank.succeed("${
-              register_bank_account {
-                username = "exchange";
-                password = "exchange";
-                name = "Exchange";
-              }
-            }")
-            # TODO: need to specify the payto_uri for the merchant?
-            systemd_run(bank, 'libeufin-bank create-account -c ${bankConfig} --username merchant --password merchant --name Merchant --payto_uri="payto://x-taler-bank/bank:8082/merchant?receiver-name=Merchant"', "libeufin-bank")
 
 
         with subtest("Set up merchant"):
@@ -236,6 +203,7 @@ import ../make-test-python.nix (
 
         client.succeed("curl -s http://exchange:8081/")
 
+
         # Make a withdrawal from the CLI wallet
         with subtest("Make a withdrawal from the CLI wallet"):
             balanceWanted = "${CURRENCY}:10"
@@ -265,6 +233,8 @@ import ../make-test-python.nix (
                     "-H 'Content-Type: application/json'",
                     f"-sSfL 'http://bank:8082/accounts/${TUSER}/withdrawals/{withdrawal["withdrawal_id"]}/confirm'"
                 ])
+
+            # wallet_cli("""--expect-success 'withdrawTestBalance' '{ "amount": "KUDOS:10", "corebankApiBaseUrl": "http://bank:8082/", "exchangeBaseUrl": "http://exchange:8081/" }'""")
 
             # Process transactions
             wallet_cli("run-until-done")
@@ -304,7 +274,7 @@ import ../make-test-python.nix (
             wallet_cli("run-until-done")
 
             # Process transaction
-            wallet_cli(f"""handle-uri --withdrawal-exchange="http://exchange:8081/" -y '{response["taler_pay_uri"]}'""")
+            wallet_cli(f"""handle-uri -y '{response["taler_pay_uri"]}'""")
             wallet_cli("run-until-done")
 
             verify_balance(balanceWanted)
