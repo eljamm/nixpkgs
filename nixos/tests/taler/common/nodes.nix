@@ -106,6 +106,7 @@ in
               # WIRE_TYPE = "iban";
               X_TALER_BANK_PAYTO_HOSTNAME = "bank:8082";
               # IBAN_PAYTO_BIC = "SANDBOXX";
+              BASE_URL = "bank:8082";
 
               # Allow creating new accounts
               ALLOW_REGISTRATION = "yes";
@@ -118,7 +119,7 @@ in
               DEFAULT_DEBT_LIMIT = "${CURRENCY}:500";
 
               # ALLOW_CONVERSION = "yes";
-              # ALLOW_EDIT_CASHOUT_PAYTO_URI = "yes";
+              ALLOW_EDIT_CASHOUT_PAYTO_URI = "yes";
 
               SUGGESTED_WITHDRAWAL_EXCHANGE = "http://exchange:8081/";
 
@@ -184,31 +185,31 @@ in
       };
 
     # TODO: still does not work properly
-    depolymerization =
-      { config, lib, ... }:
-      enableSSH {
-        services.taler = {
-          settings.taler.CURRENCY = "BITCOINBTC";
-          depolymerization = {
-            enable = false; # TODO
-            debug = true;
-          };
-        };
-        networking.firewall.enable = false;
-        # Access from http://localhost:8084/
-        virtualisation.forwardPorts = [
-          {
-            from = "host";
-            host.port = 5555;
-            guest.port = 22;
-          }
-          {
-            from = "host";
-            host.port = 8084;
-            guest.port = 8084;
-          }
-        ];
-      };
+    # depolymerization =
+    #   { config, lib, ... }:
+    #   enableSSH {
+    #     services.taler = {
+    #       settings.taler.CURRENCY = "BITCOINBTC";
+    #       depolymerization = {
+    #         enable = false; # TODO
+    #         debug = true;
+    #       };
+    #     };
+    #     networking.firewall.enable = false;
+    #     # Access from http://localhost:8084/
+    #     virtualisation.forwardPorts = [
+    #       {
+    #         from = "host";
+    #         host.port = 5555;
+    #         guest.port = 22;
+    #       }
+    #       {
+    #         from = "host";
+    #         host.port = 8084;
+    #         guest.port = 8084;
+    #       }
+    #     ];
+    #   };
   };
 
 }

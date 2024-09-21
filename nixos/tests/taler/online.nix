@@ -1,3 +1,7 @@
+# NOTE: this test requires internet connection, so you must run it interactively:
+#
+# eval $(nix-build -A driverInteractive nixos/tests/taler/online.nix)/bin/nixos-test-driver
+
 import ../make-test-python.nix (
   { pkgs, lib, ... }:
   let
