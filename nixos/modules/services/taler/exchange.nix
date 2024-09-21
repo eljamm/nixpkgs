@@ -31,7 +31,7 @@ talerUtils.mkTalerModule rec {
   ];
 
   extraOptions = {
-    services.taler.${talerComponent} = {
+    services.taler.exchange = {
       settings = lib.mkOption {
         description = ''
           Configuration options for the taler exchange config file.
@@ -77,7 +77,7 @@ talerUtils.mkTalerModule rec {
               CONFIG = lib.mkOption {
                 type = lib.types.str;
                 internal = true;
-                default = "postgres:///taler-exchange";
+                default = "postgres:///taler-${talerComponent}-httpd";
                 description = "Database connection URI.";
               };
             };
@@ -136,6 +136,10 @@ talerUtils.mkTalerModule rec {
     services.taler.includes = [
       (pkgs.writers.writeText "exchange-denominations.conf" cfg.denominationConfig)
     ];
+    systemd.services.taler-exchange-wirewatch = {
+      requires = [ "taler-${talerComponent}-httpd.service" ];
+      after = [ "taler-${talerComponent}-httpd.service" ];
+    };
   };
 
   dbInitScript =
