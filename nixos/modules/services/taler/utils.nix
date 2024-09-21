@@ -23,7 +23,7 @@
 
       services = servicesDB ++ servicesNoDB;
 
-      dbName = "taler-${talerComponent}";
+      dbName = "taler-${talerComponent}-httpd";
 
       # TODO: add option to enable these when needed?
       groupName = "taler-${talerComponent}-services";
@@ -73,7 +73,7 @@
                   serviceConfig = {
                     Type = "oneshot";
                     DynamicUser = true;
-                    User = "taler-${talerComponent}";
+                    User = dbName;
                   };
                 };
               })
