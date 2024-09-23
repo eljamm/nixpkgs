@@ -30,105 +30,103 @@ talerUtils.mkTalerModule rec {
     "secmod-rsa"
   ];
 
-  extraOptions = {
-    services.taler.exchange = {
-      settings = lib.mkOption {
-        description = ''
-          Configuration options for the taler exchange config file.
+  extraOptions.services.taler.exchange = {
+    settings = lib.mkOption {
+      description = ''
+        Configuration options for the taler exchange config file.
 
-          For a list of all possible options, please see the man page [`taler.conf(5)`](https://docs.taler.net/manpages/taler.conf.5.html#exchange-options)
-        '';
-        type = lib.types.submodule {
-          inherit (options.services.taler.settings.type.nestedTypes) freeformType;
-          options = {
-            # TODO: do we want this to be a sub-attribute or only define the exchange set of options here
-            exchange = {
-              AML_THRESHOLD = lib.mkOption {
-                type = lib.types.str;
-                default = "${cfgTaler.settings.taler.CURRENCY}:1000000";
-                defaultText = "1000000 in {option}`CURRENCY`";
-                description = "Monthly transaction volume until an account is considered suspicious and flagged for AML review.";
-              };
-              DB = lib.mkOption {
-                type = lib.types.str;
-                internal = true;
-                default = "postgres";
-              };
-              MASTER_PUBLIC_KEY = lib.mkOption {
-                type = lib.types.str;
-                default = throw ''
-                  You must provide `MASTER_PUBLIC_KEY` with the public part of your master key.
-
-                  This will be used by the auditor service to get information about the exchange.
-                  For more information, see https://docs.taler.net/taler-auditor-manual.html#initial-configuration
-
-                  To generate this key, you must run `taler-exchange-offline setup`. It will print the public key.
-                '';
-                defaultText = "None, you must set this yourself.";
-                description = "Used by the exchange to verify information signed by the offline system.";
-              };
-              PORT = lib.mkOption {
-                type = lib.types.port;
-                default = 8081;
-                description = "Port on which the HTTP server listens.";
-              };
+        For a list of all possible options, please see the man page [`taler.conf(5)`](https://docs.taler.net/manpages/taler.conf.5.html#exchange-options)
+      '';
+      type = lib.types.submodule {
+        inherit (options.services.taler.settings.type.nestedTypes) freeformType;
+        options = {
+          # TODO: do we want this to be a sub-attribute or only define the exchange set of options here
+          exchange = {
+            AML_THRESHOLD = lib.mkOption {
+              type = lib.types.str;
+              default = "${cfgTaler.settings.taler.CURRENCY}:1000000";
+              defaultText = "1000000 in {option}`CURRENCY`";
+              description = "Monthly transaction volume until an account is considered suspicious and flagged for AML review.";
             };
-            exchangedb-postgres = {
-              CONFIG = lib.mkOption {
-                type = lib.types.str;
-                internal = true;
-                default = "postgres:///taler-${talerComponent}-httpd";
-                description = "Database connection URI.";
-              };
+            DB = lib.mkOption {
+              type = lib.types.str;
+              internal = true;
+              default = "postgres";
+            };
+            MASTER_PUBLIC_KEY = lib.mkOption {
+              type = lib.types.str;
+              default = throw ''
+                You must provide `MASTER_PUBLIC_KEY` with the public part of your master key.
+
+                This will be used by the auditor service to get information about the exchange.
+                For more information, see https://docs.taler.net/taler-auditor-manual.html#initial-configuration
+
+                To generate this key, you must run `taler-exchange-offline setup`. It will print the public key.
+              '';
+              defaultText = "None, you must set this yourself.";
+              description = "Used by the exchange to verify information signed by the offline system.";
+            };
+            PORT = lib.mkOption {
+              type = lib.types.port;
+              default = 8081;
+              description = "Port on which the HTTP server listens.";
+            };
+          };
+          exchangedb-postgres = {
+            CONFIG = lib.mkOption {
+              type = lib.types.str;
+              internal = true;
+              default = "postgres:///taler-${talerComponent}-httpd";
+              description = "Database connection URI.";
             };
           };
         };
-        default = { };
       };
-      denominationConfig = lib.mkOption {
-        type = lib.types.lines;
-        # TODO: how to boostrap?
-        # TODO: assert instead of throw?
-        default = throw "You must set the denomination config `services.taler.exchange.denominationConfig`.";
-        defaultText = "None, you must set this yourself.";
-        example = ''
-          [COIN-KUDOS-n1-t1718140083]
-          VALUE = KUDOS:0.1
-          DURATION_WITHDRAW = 7 days
-          DURATION_SPEND = 2 years
-          DURATION_LEGAL = 6 years
-          FEE_WITHDRAW = KUDOS:0
-          FEE_DEPOSIT = KUDOS:0.1
-          FEE_REFRESH = KUDOS:0
-          FEE_REFUND = KUDOS:0
-          RSA_KEYSIZE = 2048
-          CIPHER = RSA
-        '';
-        description = ''
-          This option configures the cash denomination for the coins that the exchange offers.
-          For more information, consult the [upstream docs](https://docs.taler.net/taler-exchange-manual.html#coins-denomination-keys).
+      default = { };
+    };
+    denominationConfig = lib.mkOption {
+      type = lib.types.lines;
+      # TODO: how to boostrap?
+      # TODO: assert instead of throw?
+      default = throw "You must set the denomination config `services.taler.exchange.denominationConfig`.";
+      defaultText = "None, you must set this yourself.";
+      example = ''
+        [COIN-KUDOS-n1-t1718140083]
+        VALUE = KUDOS:0.1
+        DURATION_WITHDRAW = 7 days
+        DURATION_SPEND = 2 years
+        DURATION_LEGAL = 6 years
+        FEE_WITHDRAW = KUDOS:0
+        FEE_DEPOSIT = KUDOS:0.1
+        FEE_REFRESH = KUDOS:0
+        FEE_REFUND = KUDOS:0
+        RSA_KEYSIZE = 2048
+        CIPHER = RSA
+      '';
+      description = ''
+        This option configures the cash denomination for the coins that the exchange offers.
+        For more information, consult the [upstream docs](https://docs.taler.net/taler-exchange-manual.html#coins-denomination-keys).
 
-          You can either write these manually or you can use the `taler-harness deployment gen-coin-config`
-          command to generate it.
+        You can either write these manually or you can use the `taler-harness deployment gen-coin-config`
+        command to generate it.
 
-          Warning: Do not modify existing denominations after deployment.
-          Please see the upstream docs for how to safely do that.
-        '';
-      };
-      enableAccounts = lib.mkOption {
-        type = lib.types.listOf lib.types.path;
-        # TODO: improve this?
-        description = ''
-          This option enables the specified bank accounts and advertises them as
-          belonging to the exchange.
+        Warning: Do not modify existing denominations after deployment.
+        Please see the upstream docs for how to safely do that.
+      '';
+    };
+    enableAccounts = lib.mkOption {
+      type = lib.types.listOf lib.types.path;
+      # TODO: improve this?
+      description = ''
+        This option enables the specified bank accounts and advertises them as
+        belonging to the exchange.
 
-          To do this, you must pass in each account signature, which you can get
-          by using the `taler-exchange-offline enable-account` command.
+        To do this, you must pass in each account signature, which you can get
+        by using the `taler-exchange-offline enable-account` command.
 
-          For more details on how to do this, please refer to [taler-exchange-offline(1)](https://docs.taler.net/manpages/taler-exchange-offline.1.html#create-signature-to-enable-bank-account-offline)
-        '';
-        default = [ ];
-      };
+        For more details on how to do this, please refer to [taler-exchange-offline(1)](https://docs.taler.net/manpages/taler-exchange-offline.1.html#create-signature-to-enable-bank-account-offline)
+      '';
+      default = [ ];
     };
   };
 
