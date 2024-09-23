@@ -1,5 +1,4 @@
-# WIP: set up common options for Libeufin modules
-# NOTE: refactor Taler and Libeufin utils files
+# TODO: create a common module generator for Taler and Libeufin?
 {
   lib,
   pkgs,
@@ -10,7 +9,6 @@
   mkLibeufinModule =
     {
       libeufinComponent ? "",
-      dbInitScript ? "",
       extraServices ? [ ],
       extraOptions ? { },
       extraConfig ? { },
@@ -37,7 +35,7 @@
             [
               # Main service
               {
-                ${bankServiceName} = {
+                "libeufin-${libeufinComponent}" = {
                   serviceConfig = {
                     DynamicUser = true;
                     User = bankServiceName;
@@ -46,6 +44,8 @@
                       "serve -c ${cfgMain.configFile}"
                       (lib.optionalString cfg.debug " -L debug")
                     ];
+                    StateDirectory = lib.mkIf (libeufinComponent == "nexus") bankServiceName;
+                    ReadWritePaths = lib.mkIf (libeufinComponent == "nexus") [ "/var/lib/${bankServiceName}" ];
                   };
                   requires = [ "${bankServiceName}-dbinit.service" ];
                   after = [ "${bankServiceName}-dbinit.service" ];
@@ -53,15 +53,15 @@
                 };
               }
               # Database Initialisation
-              (lib.optionalAttrs (dbInitScript != "") {
-                ${bankServiceName} = {
+              {
+                "libeufin-${libeufinComponent}-dbinit" = {
                   path = [ config.services.postgresql.package ];
                   serviceConfig = {
                     Type = "oneshot";
                     DynamicUser = true;
                     User = bankServiceName;
                     ExecStart = toString [
-                      (lib.getExe' cfg.package "${bankServiceName}")
+                      (lib.getExe' cfg.package "libeufin-${libeufinComponent}")
                       "dbinit -c ${cfgMain.configFile}"
                       (lib.optionalString cfg.debug " -L debug")
                     ];
@@ -69,7 +69,7 @@
                   requires = [ "postgresql.service" ];
                   after = [ "postgresql.service" ];
                 };
-              })
+              }
             ]
             ++ extraServices
           );

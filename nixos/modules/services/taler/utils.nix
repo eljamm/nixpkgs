@@ -1,4 +1,4 @@
-# WIP: set up common options between Taler modules
+# TODO: create a common module generator for Taler and Libeufin?
 {
   lib,
   pkgs,
