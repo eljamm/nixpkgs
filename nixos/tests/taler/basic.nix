@@ -117,6 +117,7 @@ import ../make-test-python.nix (
                 client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
 
 
+        # NOTE: the setup for taler components is smoother if the bank is confiugured first
         bank.start()
         bank.wait_for_open_port(8082)
 
@@ -143,7 +144,11 @@ import ../make-test-python.nix (
 
         with subtest("Enable exchange wire account"):
             exchange.wait_until_succeeds("taler-exchange-offline download sign upload")
-            exchange.wait_until_succeeds('taler-exchange-offline upload < ${./conf/exchange-account.json}')
+            exchange.succeed('taler-exchange-offline upload < ${./conf/exchange-account.json}')
+
+            # NOTE: cannot deposit coins/pay merchant if wire fees are not set up
+            exchange.succeed('taler-exchange-offline wire-fee now x-taler-bank "${CURRENCY}:0" "${CURRENCY}:0" upload')
+            exchange.succeed('taler-exchange-offline global-fee now "${CURRENCY}:0" "${CURRENCY}:0" "${CURRENCY}:0" 1h 6a 0 upload')
 
 
         # Verify that exchange keys exist
@@ -234,16 +239,12 @@ import ../make-test-python.nix (
                     f"-sSfL 'http://bank:8082/accounts/${TUSER}/withdrawals/{withdrawal["withdrawal_id"]}/confirm'"
                 ])
 
-            # wallet_cli("""--expect-success 'withdrawTestBalance' '{ "amount": "KUDOS:10", "corebankApiBaseUrl": "http://bank:8082/", "exchangeBaseUrl": "http://exchange:8081/" }'""")
-
             # Process transactions
             wallet_cli("run-until-done")
 
             verify_balance(balanceWanted)
 
 
-        breakpoint()
-        # FIX: `insufficient balance` error while trying to pay for order
         with subtest("Pay for an order"):
             balanceWanted = "${CURRENCY}:9" # after paying
 
