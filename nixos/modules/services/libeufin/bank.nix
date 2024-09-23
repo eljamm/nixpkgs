@@ -5,18 +5,15 @@
   pkgs,
   ...
 }:
-let
-  cfg = config.services.libeufin.bank;
-  bankServiceName = "libeufin-bank";
-  dbinitServiceName = "libeufin-bank-dbinit";
-  inherit (config.services.libeufin) configFile;
-in
-{
-  options.services.libeufin.bank = {
-    enable = lib.mkEnableOption "libeufin core banking system and web interface";
-    package = lib.mkPackageOption pkgs "libeufin" { };
-    debug = lib.mkEnableOption "debug logging";
 
+let
+  libeufinUtils = import ./utils.nix { inherit lib pkgs config; };
+in
+
+libeufinUtils.mkLibeufinModule rec {
+  libeufinComponent = "bank";
+
+  extraOptions.services.libeufin.bank = {
     settings = lib.mkOption {
       description = ''
         Configuration options for the libeufin bank system config file.
@@ -70,58 +67,11 @@ in
             CONFIG = lib.mkOption {
               type = lib.types.str;
               internal = true;
-              default = "postgresql:///${bankServiceName}";
+              default = "postgresql:///libeufin-${libeufinComponent}";
             };
           };
         };
       };
     };
-  };
-
-  config = lib.mkIf cfg.enable {
-    services.libeufin = {
-      inherit (cfg) enable settings;
-    };
-
-    systemd.services = {
-      ${bankServiceName} = {
-        serviceConfig = {
-          DynamicUser = true;
-          User = bankServiceName;
-          ExecStart = toString [
-            (lib.getExe' cfg.package "libeufin-bank")
-            "serve -c ${configFile}"
-            (lib.optionalString cfg.debug " -L debug")
-          ];
-        };
-        requires = [ "${dbinitServiceName}.service" ];
-        after = [ "${dbinitServiceName}.service" ];
-        wantedBy = [ "multi-user.target" ]; # TODO slice?
-      };
-      ${dbinitServiceName} = {
-        path = [ config.services.postgresql.package ];
-        serviceConfig = {
-          Type = "oneshot";
-          DynamicUser = true;
-          User = bankServiceName;
-          ExecStart = toString [
-            (lib.getExe' cfg.package "libeufin-bank")
-            "dbinit -c ${configFile}"
-            (lib.optionalString cfg.debug " -L debug")
-          ];
-        };
-        requires = [ "postgresql.service" ];
-        after = [ "postgresql.service" ];
-      };
-    };
-
-    services.postgresql.enable = true;
-    services.postgresql.ensureDatabases = [ bankServiceName ];
-    services.postgresql.ensureUsers = [
-      {
-        name = bankServiceName;
-        ensureDBOwnership = true;
-      }
-    ];
   };
 }
