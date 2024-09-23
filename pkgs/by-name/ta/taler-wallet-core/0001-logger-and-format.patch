@@ -1,0 +1,140 @@
+From 80ad48618191d3b504d54fc5307bc4af77551d8a Mon Sep 17 00:00:00 2001
+From: eljamm <fedi.jamoussi@protonmail.ch>
+Date: Mon, 23 Sep 2024 14:04:56 +0100
+Subject: [PATCH] logger and format
+
+---
+ .../taler-wallet-core/src/coinSelection.ts    | 17 ++++++++-----
+ packages/taler-wallet-core/src/exchanges.ts   | 25 +++++++++++--------
+ 2 files changed, 25 insertions(+), 17 deletions(-)
+
+diff --git a/packages/taler-wallet-core/src/coinSelection.ts b/packages/taler-wallet-core/src/coinSelection.ts
+index 51316a21f..4657e8bad 100644
+--- a/packages/taler-wallet-core/src/coinSelection.ts
++++ b/packages/taler-wallet-core/src/coinSelection.ts
+@@ -156,9 +156,9 @@ function tallyFees(
+
+ export type SelectPayCoinsResult =
+   | {
+-      type: "failure";
+-      insufficientBalanceDetails: PaymentInsufficientBalanceDetails;
+-    }
++    type: "failure";
++    insufficientBalanceDetails: PaymentInsufficientBalanceDetails;
++  }
+   | { type: "prospective"; result: ProspectivePayCoinSelection }
+   | { type: "success"; coinSel: PayCoinSelection };
+
+@@ -751,10 +751,13 @@ export function findMatchingWire(
+ ): { wireFee: AmountJson } | undefined {
+   for (const acc of exchangeWireDetails.wireInfo.accounts) {
+     const pp = parsePaytoUri(acc.payto_uri);
++    logger.info("DEBUGPRINT[3]: coinSelection.ts:753: pp=", pp)
++    logger.info("DEBUGPRINT[4]: coinSelection.ts:756: wireMethod=", wireMethod)
+     checkLogicInvariant(!!pp);
+     if (pp.targetType !== wireMethod) {
+       continue;
+     }
++    logger.info("WILD: checking wirefeestr")
+     const wireFeeStr = exchangeWireDetails.wireInfo.feesForType[
+       wireMethod
+     ]?.find((x) => {
+@@ -769,6 +772,7 @@ export function findMatchingWire(
+       continue;
+     }
+
++    logger.info("WILD: checking debit account")
+     let debitAccountCheckOk = false;
+     if (depositPaytoUri) {
+       // FIXME: We should somehow propagate the hint here!
+@@ -787,6 +791,7 @@ export function findMatchingWire(
+       continue;
+     }
+
++    logger.info("WILD: you have reached your destination")
+     return {
+       wireFee: Amounts.parseOrThrow(wireFeeStr),
+     };
+@@ -998,9 +1003,9 @@ export type SelectPeerCoinsResult =
+   // Successful, but using coins that are not materially available yet.
+   | { type: "prospective"; result: ProspectivePeerCoinSelectionDetails }
+   | {
+-      type: "failure";
+-      insufficientBalanceDetails: PaymentInsufficientBalanceDetails;
+-    };
++    type: "failure";
++    insufficientBalanceDetails: PaymentInsufficientBalanceDetails;
++  };
+
+ export interface PeerCoinSelectionRequest {
+   instructedAmount: AmountJson;
+diff --git a/packages/taler-wallet-core/src/exchanges.ts b/packages/taler-wallet-core/src/exchanges.ts
+index fe78c63aa..30a2145c7 100644
+--- a/packages/taler-wallet-core/src/exchanges.ts
++++ b/packages/taler-wallet-core/src/exchanges.ts
+@@ -434,8 +434,8 @@ async function makeExchangeListItem(
+ ): Promise<ExchangeListItem> {
+   const lastUpdateErrorInfo: OperationErrorInfo | undefined = lastError
+     ? {
+-        error: lastError,
+-      }
++      error: lastError,
++    }
+     : undefined;
+
+   let scopeInfo: ScopeInfo | undefined = undefined;
+@@ -640,8 +640,10 @@ async function validateWireInfo(
+   wireInfo: ExchangeKeysDownloadResult,
+   masterPublicKey: string,
+ ): Promise<WireInfo> {
++  logger.info("DEBUGPRINT[2]: exchanges.ts:643: wireInfo=", wireInfo)
+   for (const a of wireInfo.accounts) {
+     logger.trace("validating exchange acct");
++    logger.info("validating exchange acct");
+     let isValid = false;
+     if (wex.ws.config.testing.insecureTrustExchange) {
+       isValid = true;
+@@ -995,6 +997,8 @@ async function downloadExchangeKeysInfo(
+     }
+   }
+
++  logger.info("DEBUGPRINT[1]: exchanges.ts:920: exchangeKeysJsonUnchecked=", exchangeKeysJsonUnchecked)
++
+   return {
+     masterPublicKey: exchangeKeysJsonUnchecked.master_public_key,
+     currency,
+@@ -1138,8 +1142,7 @@ async function startUpdateExchangeEntry(
+   options: { forceUpdate?: boolean } = {},
+ ): Promise<void> {
+   logger.info(
+-    `starting update of exchange entry ${exchangeBaseUrl}, forced=${
+-      options.forceUpdate ?? false
++    `starting update of exchange entry ${exchangeBaseUrl}, forced=${options.forceUpdate ?? false
+     }`,
+   );
+
+@@ -2951,14 +2954,14 @@ export async function getExchangeWireFee(
+
+ export type BalanceThresholdCheckResult =
+   | {
+-      result: "ok";
+-    }
++    result: "ok";
++  }
+   | {
+-      result: "violation";
+-      nextThreshold: AmountString;
+-      walletKycStatus: ExchangeWalletKycStatus | undefined;
+-      walletKycAccessToken: string | undefined;
+-    };
++    result: "violation";
++    nextThreshold: AmountString;
++    walletKycStatus: ExchangeWalletKycStatus | undefined;
++    walletKycAccessToken: string | undefined;
++  };
+
+ export async function checkIncomingAmountLegalUnderKycBalanceThreshold(
+   wex: WalletExecutionContext,
+--
+2.46.0
+

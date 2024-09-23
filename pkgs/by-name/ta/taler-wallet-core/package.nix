@@ -45,6 +45,10 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-9pRhaQNnIzbhahMaTVVZqLTlAxh7GZxoz4Gf3TDldAA=";
   };
 
+  patches = [
+    ./0001-logger-and-format.patch
+  ];
+
   nativeBuildInputs = [
     customPython
     nodejs
