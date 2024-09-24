@@ -92,7 +92,7 @@ talerUtils.mkTalerModule rec {
     };
   };
 
-  dbInitScript =
+  dbInit.script =
     let
       # NOTE: not documented, but is necessary
       dbScript = pkgs.writers.writeText "taler-merchant-db-permissions.sql" (

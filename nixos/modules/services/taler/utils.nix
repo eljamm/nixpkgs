@@ -9,9 +9,9 @@
   mkTalerModule =
     {
       talerComponent ? "",
-      dbInitScript ? "",
       servicesDB ? [ ],
       servicesNoDB ? [ ],
+      dbInit ? { },
       extraServices ? [ ],
       extraOptions ? { },
       extraConfig ? { },
@@ -64,10 +64,10 @@
                 wantedBy = [ "multi-user.target" ]; # TODO slice?
               }))
               # Database Initialisation
-              (lib.optionalAttrs (dbInitScript != "") {
+              (lib.optionalAttrs (dbInit ? script) {
                 "taler-${talerComponent}-dbinit" = {
-                  path = [ config.services.postgresql.package ];
-                  script = dbInitScript;
+                  path = [ config.services.postgresql.package ] ++ (lib.optionals (dbInit ? path) dbInit.path);
+                  inherit (dbInit) script;
                   requires = [ "postgresql.service" ];
                   after = [ "postgresql.service" ];
                   serviceConfig = {

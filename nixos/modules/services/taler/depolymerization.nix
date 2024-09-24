@@ -70,28 +70,17 @@ talerUtils.mkTalerModule rec {
     # services.bitcoind.taler.enable = true;
   };
 
-  extraServices = [
-    # Database Initialisation
-    {
-      "taler-${talerComponent}-dbinit" = {
-        path = [
-          config.services.postgresql.package
-          cfgTaler.exchange.package
-          pkgs.gnunet
-          pkgs.toybox # for `which`
-        ];
-        requires = [ "postgresql.service" ];
-        after = [ "postgresql.service" ];
-        script = ''
-          ${lib.getExe' cfg.package "btc-wire"} initdb -c ${cfgTaler.configFile}
-          ${lib.getExe' cfg.package "btc-wire"} initwallet -c ${cfgTaler.configFile}
-        '';
-        serviceConfig = {
-          Type = "oneshot";
-          DynamicUser = true;
-          User = dbName;
-        };
-      };
-    }
-  ];
+  # Database Initialisation
+  dbInit = {
+    script = ''
+      ${lib.getExe' cfg.package "btc-wire"} initdb -c ${cfgTaler.configFile}
+      ${lib.getExe' cfg.package "btc-wire"} initwallet -c ${cfgTaler.configFile}
+    '';
+    path = [
+      config.services.postgresql.package
+      cfgTaler.exchange.package
+      pkgs.gnunet
+      pkgs.toybox # for `which`
+    ];
+  };
 }
