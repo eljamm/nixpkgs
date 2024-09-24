@@ -28,7 +28,7 @@ import ../../make-test-python.nix (
         inherit (cfgNodes) CURRENCY;
         inherit (cfgScripts) commonScripts nexus_fake_incoming;
 
-        bankConfig = toString nodes.bank.services.libeufin.configFile.outPath;
+        bankConfig = nodes.bank.services.libeufin.configFile.outPath;
         bankSettings = nodes.bank.services.libeufin.settings.libeufin-bank;
 
         # Bank admin account credentials
@@ -49,8 +49,10 @@ import ../../make-test-python.nix (
         # import common scripts
         ${commonScripts}
 
-        # NOTE: it's better if the bank is confiugured first
+
+        # NOTE: start components up individually so they don't collide before their setup is done
         bank.start()
+        client.start()
         bank.wait_for_open_port(8082)
 
 
@@ -66,10 +68,8 @@ import ../../make-test-python.nix (
                 register_bank_account("merchant", "merchant", "Merchant")
 
 
-        start_all()
-
+        exchange.start()
         exchange.wait_for_open_port(8081)
-        merchant.wait_for_open_port(8083)
 
 
         with subtest("Set up exchange"):
@@ -84,6 +84,10 @@ import ../../make-test-python.nix (
 
         # Verify that exchange keys exist
         bank.succeed("curl -s http://exchange:8081/keys")
+
+
+        merchant.start()
+        merchant.wait_for_open_port(8083)
 
 
         with subtest("Set up merchant"):

@@ -8,7 +8,7 @@
 let
   cfgNodes = pkgs.callPackage ./nodes.nix { inherit lib; };
 
-  bankConfig = toString nodes.bank.services.libeufin.configFile.outPath;
+  bankConfig = nodes.bank.services.libeufin.configFile.outPath;
   nexusSettings = nodes.bank.services.libeufin.settings.nexus-ebics;
 
   inherit (cfgNodes) CURRENCY;

@@ -14,8 +14,6 @@ let
 
   talerComponent = "depolymerization";
   dbName = "taler-${talerComponent}-httpd";
-
-  inherit (cfgTaler) runtimeDir;
 in
 
 talerUtils.mkTalerModule rec {
@@ -64,8 +62,6 @@ talerUtils.mkTalerModule rec {
   };
 
   extraConfig = {
-    services.taler.settings.taler.CURRENCY = "BITCOINBTC";
-
     # TODO: requires `bitcoind` with `txindex` to be running
     # services.bitcoind.taler.enable = true;
   };
