@@ -51,7 +51,7 @@
                   Group = groupName;
                   ExecStart = toString [
                     (lib.getExe' cfg.package name)
-                    "-c ${config.services.taler.configFile}"
+                    "-c ${cfgTaler.configFile}"
                     (lib.optionalString cfg.debug " -L debug")
                   ];
                   RuntimeDirectory = name;
