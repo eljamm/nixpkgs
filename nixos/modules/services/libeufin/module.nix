@@ -6,8 +6,8 @@
 }:
 
 let
+  cfg = config.services.libeufin;
   settingsFormat = pkgs.formats.ini { };
-  this = config.services.libeufin;
 in
 
 {
@@ -15,7 +15,7 @@ in
     enable = lib.mkEnableOption "the libeufin system" // lib.mkOption { internal = true; };
     configFile = lib.mkOption {
       internal = true;
-      default = settingsFormat.generate "generated-libeufin.conf" this.settings;
+      default = settingsFormat.generate "generated-libeufin.conf" cfg.settings;
     };
     settings = lib.mkOption {
       description = "Global configuration options for the libeufin bank system config file.";
@@ -24,7 +24,7 @@ in
     };
   };
 
-  config = lib.mkIf this.enable {
-    environment.etc."libeufin/libeufin.conf".source = this.configFile;
+  config = lib.mkIf cfg.enable {
+    environment.etc."libeufin/libeufin.conf".source = cfg.configFile;
   };
 }
