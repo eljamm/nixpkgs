@@ -42,6 +42,10 @@ in
 rec {
   CURRENCY = "KUDOS";
 
+  bankConfig = toString nodes.bank.services.libeufin.configFile.outPath;
+  bankSettings = nodes.bank.services.libeufin.settings.libeufin-bank;
+  nexusSettings = nodes.bank.services.libeufin.settings.nexus-ebics;
+
   nodes = {
     exchange =
       { config, lib, ... }:
