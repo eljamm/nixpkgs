@@ -1,13 +1,18 @@
-{ lib, pkgs, ... }:
+{ lib, ... }:
 let
-  CURRENCY = "KUDOS";
-
-  # TODO: improve so we don't have to manually forward ssh port
-  # Enable SSH on machine, recursively merge with settings
+  # Forward SSH and WebUI ports to host machine
   #
   # Connect with: ssh root@localhost -p <hostPort>
-  enableSSH =
-    settings:
+  # Access WebUI from: http://localhost:<hostPort>
+  #
+  # NOTE: This is only accessible from an interactive test, for example:
+  # $ eval $(nix-build -A nixosTests.taler.basic.driver)/bin/nixos-test-driver
+  mkNode =
+    {
+      sshPort ? 0,
+      webuiPort ? 0,
+      nodeSettings ? { },
+    }:
     lib.recursiveUpdate {
       services.openssh = {
         enable = true;
@@ -17,204 +22,187 @@ let
         };
       };
       security.pam.services.sshd.allowNullPassword = true;
-    } settings;
+      virtualisation.forwardPorts =
+        (lib.optionals (sshPort != 0) [
+          {
+            from = "host";
+            host.port = sshPort;
+            guest.port = 22;
+          }
+        ])
+        ++ (lib.optionals (webuiPort != 0) [
+          {
+            from = "host";
+            host.port = webuiPort;
+            guest.port = webuiPort;
+          }
+        ]);
+    } nodeSettings;
 in
-{
+rec {
+  CURRENCY = "KUDOS";
+
   nodes = {
     exchange =
       { config, lib, ... }:
-      enableSSH {
-        services.taler = {
-          settings = {
-            taler.CURRENCY = CURRENCY;
+      mkNode {
+        sshPort = 1111;
+        webuiPort = 8081;
+
+        nodeSettings = {
+          services.taler = {
+            settings = {
+              taler.CURRENCY = CURRENCY;
+            };
+            includes = [ ../conf/taler-accounts.conf ];
+            exchange = {
+              enable = true;
+              debug = true;
+              denominationConfig = lib.readFile ../conf/taler-denominations.conf;
+              enableAccounts = [ ../conf/exchange-account.json ];
+              settings.exchange = {
+                MASTER_PUBLIC_KEY = "2TQSTPFZBC2MC4E52NHPA050YXYG02VC3AB50QESM6JX1QJEYVQ0";
+                BASE_URL = "http://exchange:8081/";
+              };
+              settings.exchange-offline = {
+                MASTER_PRIV_FILE = "${../conf/private.key}";
+              };
+            };
           };
-          includes = [ ../conf/taler-accounts.conf ];
-          exchange = {
+          networking.firewall.enable = false;
+          environment.systemPackages = [ config.services.taler.exchange.package ];
+        };
+      };
+
+    bank =
+      { config, ... }:
+      mkNode {
+        sshPort = 2222;
+        webuiPort = 8082;
+
+        nodeSettings = {
+          services.libeufin.bank = {
             enable = true;
             debug = true;
-            denominationConfig = lib.readFile ../conf/taler-denominations.conf;
-            enableAccounts = [ ../conf/exchange-account.json ];
-            settings.exchange = {
-              MASTER_PUBLIC_KEY = "2TQSTPFZBC2MC4E52NHPA050YXYG02VC3AB50QESM6JX1QJEYVQ0";
-              BASE_URL = "http://exchange:8081/";
-            };
-            settings.exchange-offline = {
-              MASTER_PRIV_FILE = "${../conf/private.key}";
+            settings = {
+              libeufin-bank = {
+                WIRE_TYPE = "x-taler-bank";
+                # WIRE_TYPE = "iban";
+                X_TALER_BANK_PAYTO_HOSTNAME = "bank:8082";
+                # IBAN_PAYTO_BIC = "SANDBOXX";
+                BASE_URL = "bank:8082";
+
+                # Allow creating new accounts
+                ALLOW_REGISTRATION = "yes";
+
+                # A registration bonus makes withdrawals easier since the
+                # bank account balance is not empty
+                REGISTRATION_BONUS_ENABLED = "yes";
+                REGISTRATION_BONUS = "${CURRENCY}:100";
+
+                DEFAULT_DEBT_LIMIT = "${CURRENCY}:500";
+
+                # ALLOW_CONVERSION = "yes";
+                ALLOW_EDIT_CASHOUT_PAYTO_URI = "yes";
+
+                SUGGESTED_WITHDRAWAL_EXCHANGE = "http://exchange:8081/";
+
+                inherit CURRENCY;
+              };
             };
           };
+
+          services.libeufin.nexus = {
+            enable = true;
+            debug = true;
+            settings = {
+              nexus-ebics = {
+                # == Mandatory ==
+                inherit CURRENCY;
+                # Bank
+                HOST_BASE_URL = "http://bank:8082/";
+                BANK_DIALECT = "postfinance";
+                # EBICS IDs
+                HOST_ID = "PFEBICS";
+                USER_ID = "PFC00563";
+                PARTNER_ID = "PFC00563";
+                # Account information
+                IBAN = "CH7789144474425692816";
+                BIC = "POFICHBEXXX";
+                NAME = "John Smith S.A.";
+
+                # == Optional ==
+                CLIENT_PRIVATE_KEYS_FILE = "/var/lib/libeufin-nexus/client-ebics-keys.json";
+              };
+              libeufin-nexusdb-postgres.CONFIG = "postgresql:///libeufin-nexus";
+            };
+          };
+          networking.firewall.enable = false;
+          environment.systemPackages = [ config.services.libeufin.bank.package ];
         };
-        networking.firewall.enable = false;
-        environment.systemPackages = [ config.services.taler.exchange.package ];
-        # Access from http://localhost:8081/
-        virtualisation.forwardPorts = [
-          {
-            from = "host";
-            host.port = 1111;
-            guest.port = 22;
-          }
-          {
-            from = "host";
-            host.port = 8081;
-            guest.port = 8081;
-          }
-        ];
       };
 
     merchant =
       { config, ... }:
-      enableSSH {
-        services.taler = {
-          settings = {
-            taler.CURRENCY = CURRENCY;
-          };
-          merchant = {
-            enable = true;
-            debug = true;
-            settings.merchant-exchange-test = {
-              EXCHANGE_BASE_URL = "http://exchange:8081/";
-              MASTER_KEY = "2TQSTPFZBC2MC4E52NHPA050YXYG02VC3AB50QESM6JX1QJEYVQ0";
-              inherit CURRENCY;
+      mkNode {
+        sshPort = 3333;
+        webuiPort = 8083;
+
+        nodeSettings = {
+          services.taler = {
+            settings = {
+              taler.CURRENCY = CURRENCY;
+            };
+            merchant = {
+              enable = true;
+              debug = true;
+              settings.merchant-exchange-test = {
+                EXCHANGE_BASE_URL = "http://exchange:8081/";
+                MASTER_KEY = "2TQSTPFZBC2MC4E52NHPA050YXYG02VC3AB50QESM6JX1QJEYVQ0";
+                inherit CURRENCY;
+              };
             };
           };
+          networking.firewall.enable = false;
+          environment.systemPackages = [ config.services.taler.merchant.package ];
         };
-        networking.firewall.enable = false;
-        environment.systemPackages = [ config.services.taler.merchant.package ];
-        # Access WebUI from http://localhost:8083/
-        virtualisation.forwardPorts = [
-          {
-            from = "host";
-            host.port = 2222;
-            guest.port = 22;
-          }
-          {
-            from = "host";
-            host.port = 8083;
-            guest.port = 8083;
-          }
-        ];
-      };
-
-    bank =
-      { config, pkgs, ... }:
-      enableSSH {
-        services.libeufin.bank = {
-          enable = true;
-          debug = true;
-          settings = {
-            libeufin-bank = {
-              WIRE_TYPE = "x-taler-bank";
-              # WIRE_TYPE = "iban";
-              X_TALER_BANK_PAYTO_HOSTNAME = "bank:8082";
-              # IBAN_PAYTO_BIC = "SANDBOXX";
-              BASE_URL = "bank:8082";
-
-              # Allow creating new accounts
-              ALLOW_REGISTRATION = "yes";
-
-              # A registration bonus makes withdrawals easier since the
-              # bank account balance is not empty
-              REGISTRATION_BONUS_ENABLED = "yes";
-              REGISTRATION_BONUS = "${CURRENCY}:100";
-
-              DEFAULT_DEBT_LIMIT = "${CURRENCY}:500";
-
-              # ALLOW_CONVERSION = "yes";
-              ALLOW_EDIT_CASHOUT_PAYTO_URI = "yes";
-
-              SUGGESTED_WITHDRAWAL_EXCHANGE = "http://exchange:8081/";
-
-              inherit CURRENCY;
-            };
-          };
-        };
-
-        services.libeufin.nexus = {
-          enable = true;
-          debug = true;
-          settings = {
-            nexus-ebics = {
-              # == Mandatory ==
-              inherit CURRENCY;
-              # Bank
-              HOST_BASE_URL = "http://bank:8082/";
-              BANK_DIALECT = "postfinance";
-              # EBICS IDs
-              HOST_ID = "PFEBICS";
-              USER_ID = "PFC00563";
-              PARTNER_ID = "PFC00563";
-              # Account information
-              IBAN = "CH7789144474425692816";
-              BIC = "POFICHBEXXX";
-              NAME = "John Smith S.A.";
-
-              # == Optional ==
-              CLIENT_PRIVATE_KEYS_FILE = "/var/lib/libeufin-nexus/client-ebics-keys.json";
-            };
-            libeufin-nexusdb-postgres.CONFIG = "postgresql:///libeufin-nexus";
-          };
-        };
-        networking.firewall.enable = false;
-        environment.systemPackages = [ config.services.libeufin.bank.package ];
-        # Access WebUI from http://localhost:8082/
-        virtualisation.forwardPorts = [
-          {
-            from = "host";
-            host.port = 3333;
-            guest.port = 22;
-          }
-          {
-            from = "host";
-            host.port = 8082;
-            guest.port = 8082;
-          }
-        ];
       };
 
     client =
       { pkgs, ... }:
-      enableSSH {
-        networking.firewall.enable = false;
-        environment.systemPackages = [ pkgs.taler-wallet-core ];
-        virtualisation.forwardPorts = [
-          {
-            from = "host";
-            host.port = 4444;
-            guest.port = 22;
-          }
-        ];
+      mkNode {
+        sshPort = 4444;
+
+        nodeSettings = {
+          networking.firewall.enable = false;
+          environment.systemPackages = [ pkgs.taler-wallet-core ];
+        };
       };
 
     # TODO: still does not work properly
     depolymerization =
-      { config, lib, ... }:
-      enableSSH {
-        services.taler = {
-          settings.taler.CURRENCY = "BITCOINBTC";
-          depolymerization = {
-            enable = true;
-            debug = true;
-            settings = {
-              depolymerizer-bitcoin = {
-                AUTH_METHOD = "basic";
-                AUTH_TOKEN = "YWRtaW46cGFzc3dvcmQ=";
+      { config, ... }:
+      mkNode {
+        sshPort = 5555;
+        webuiPort = 8084;
+
+        nodeSettings = {
+          services.taler = {
+            settings.taler.CURRENCY = "BITCOINBTC";
+            depolymerization = {
+              enable = true;
+              debug = true;
+              settings = {
+                depolymerizer-bitcoin = {
+                  AUTH_METHOD = "basic";
+                  AUTH_TOKEN = "YWRtaW46cGFzc3dvcmQ=";
+                };
               };
             };
           };
+          networking.firewall.enable = false;
+          environment.systemPackages = [ config.services.taler.depolymerization.package ];
         };
-        networking.firewall.enable = false;
-        # Access from http://localhost:8084/
-        virtualisation.forwardPorts = [
-          {
-            from = "host";
-            host.port = 5555;
-            guest.port = 22;
-          }
-          {
-            from = "host";
-            host.port = 8084;
-            guest.port = 8084;
-          }
-        ];
       };
   };
 

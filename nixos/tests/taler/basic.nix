@@ -1,14 +1,17 @@
 import ../make-test-python.nix (
   { pkgs, lib, ... }:
+  let
+    cfgNodes = pkgs.callPackage ./common/nodes.nix { inherit lib; };
+  in
   {
     name = "Taler Basic Test";
     meta = {
       maintainers = [ ];
     };
 
-    # Configuration for for Taler components' virtual-machine nodes
+    # Taler components virtual-machine nodes
     nodes = {
-      inherit ((pkgs.callPackage ./common/nodes.nix { inherit lib; }).nodes)
+      inherit (cfgNodes.nodes)
         bank
         client
         exchange
@@ -21,12 +24,11 @@ import ../make-test-python.nix (
     testScript =
       { nodes, ... }:
       let
-        bankConfig = toString nodes.bank.services.libeufin.configFile.outPath;
+        inherit (cfgNodes) CURRENCY;
 
+        bankConfig = toString nodes.bank.services.libeufin.configFile.outPath;
         bankSettings = nodes.bank.services.libeufin.settings.libeufin-bank;
         nexusSettings = nodes.bank.services.libeufin.settings.nexus-ebics;
-
-        inherit (nodes.exchange.services.taler.settings.taler) CURRENCY;
 
         # Bank admin account credentials
         AUSER = "admin";
