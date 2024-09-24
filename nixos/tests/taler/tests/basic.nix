@@ -1,7 +1,7 @@
-import ../make-test-python.nix (
+import ../../make-test-python.nix (
   { pkgs, lib, ... }:
   let
-    cfgNodes = pkgs.callPackage ./common/nodes.nix { inherit lib; };
+    cfgNodes = pkgs.callPackage ../common/nodes.nix { inherit lib; };
   in
   {
     name = "Taler Basic Test";
@@ -23,7 +23,7 @@ import ../make-test-python.nix (
     testScript =
       { nodes, ... }:
       let
-        cfgScripts = pkgs.callPackage ./common/scripts.nix { inherit lib pkgs nodes; };
+        cfgScripts = pkgs.callPackage ../common/scripts.nix { inherit lib pkgs nodes; };
 
         inherit (cfgNodes) CURRENCY;
         inherit (cfgScripts) commonScripts nexus_fake_incoming;
@@ -37,6 +37,8 @@ import ../make-test-python.nix (
 
         TUSER = "testUser";
         TPASS = "testUser";
+
+        exchangeAccount = ../conf/exchange-account.json;
       in
 
       # NOTE: for NeoVim formatting and highlights. Remove later.
@@ -73,7 +75,7 @@ import ../make-test-python.nix (
         with subtest("Set up exchange"):
             exchange.wait_until_succeeds("taler-exchange-offline download sign upload")
             # Enable exchange wire account
-            exchange.succeed('taler-exchange-offline upload < ${./conf/exchange-account.json}')
+            exchange.succeed('taler-exchange-offline upload < ${exchangeAccount}')
 
             # NOTE: cannot deposit coins/pay merchant if wire fees are not set up
             exchange.succeed('taler-exchange-offline wire-fee now x-taler-bank "${CURRENCY}:0" "${CURRENCY}:0" upload')

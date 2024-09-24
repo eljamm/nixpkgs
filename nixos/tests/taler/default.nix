@@ -3,5 +3,6 @@
   pkgs ? import ../../.. { inherit system; },
 }:
 {
-  basic = import ./basic.nix { inherit system pkgs; };
+  basic = import ./tests/basic.nix { inherit system pkgs; };
+  online = import ./tests/online.nix { inherit system pkgs; };
 }

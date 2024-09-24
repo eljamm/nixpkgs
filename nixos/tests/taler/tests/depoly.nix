@@ -1,4 +1,4 @@
-import ../make-test-python.nix (
+import ../../make-test-python.nix (
   { pkgs, lib, ... }:
   {
     name = "Taler Depolymerization Test";
@@ -7,7 +7,7 @@ import ../make-test-python.nix (
     };
 
     nodes = {
-      inherit ((pkgs.callPackage ./common/nodes.nix { inherit lib; }).nodes) depolymerization;
+      inherit ((pkgs.callPackage ../common/nodes.nix { inherit lib; }).nodes) depolymerization;
     };
 
     testScript =

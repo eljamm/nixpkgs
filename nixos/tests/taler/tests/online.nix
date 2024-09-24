@@ -2,7 +2,7 @@
 #
 # eval $(nix-build -A driverInteractive nixos/tests/taler/online.nix)/bin/nixos-test-driver
 
-import ../make-test-python.nix (
+import ../../make-test-python.nix (
   { pkgs, lib, ... }:
   let
     CURRENCY = "KUDOS";
