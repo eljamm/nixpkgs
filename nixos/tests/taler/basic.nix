@@ -7,7 +7,14 @@ import ../make-test-python.nix (
     };
 
     # Configuration for for Taler components' virtual-machine nodes
-    inherit (pkgs.callPackage ./common/nodes.nix { inherit lib; }) nodes;
+    nodes = {
+      inherit ((pkgs.callPackage ./common/nodes.nix { inherit lib; }).nodes)
+        bank
+        client
+        exchange
+        merchant
+        ;
+    };
 
     # TODO: make separate tests (i.e. for each component)?
     # TODO: move common scripts/functions into separate file to be re-used by tests
@@ -117,23 +124,21 @@ import ../make-test-python.nix (
                 client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
 
 
-        # NOTE: the setup for taler components is smoother if the bank is confiugured first
+        # NOTE: it's better if the bank is confiugured first
         bank.start()
         bank.wait_for_open_port(8082)
 
 
-        with subtest("Modify bank's admin account"):
-            # Change password
+        with subtest("Set up Libeufin bank"):
+            # Modify admin account password, increase debit threshold
             systemd_run(bank, 'libeufin-bank passwd -c "${bankConfig}" "${AUSER}" "${APASS}"', "libeufin-bank")
-            # Increase debit amount
             systemd_run(bank, 'libeufin-bank edit-account -c ${bankConfig} --debit_threshold="${bankSettings.CURRENCY}:1000000" ${AUSER}', "libeufin-bank")
 
-
-        # register_bank_account(username, password, name)
-        with subtest("Register bank accounts"):
-            register_bank_account("testUser", "testUser", "User")
-            register_bank_account("exchange", "exchange", "Exchange")
-            register_bank_account("merchant", "merchant", "Merchant")
+            with subtest("Register bank accounts"):
+                # username, password, name
+                register_bank_account("testUser", "testUser", "User")
+                register_bank_account("exchange", "exchange", "Exchange")
+                register_bank_account("merchant", "merchant", "Merchant")
 
 
         start_all()
@@ -142,8 +147,9 @@ import ../make-test-python.nix (
         merchant.wait_for_open_port(8083)
 
 
-        with subtest("Enable exchange wire account"):
+        with subtest("Set up exchange"):
             exchange.wait_until_succeeds("taler-exchange-offline download sign upload")
+            # Enable exchange wire account
             exchange.succeed('taler-exchange-offline upload < ${./conf/exchange-account.json}')
 
             # NOTE: cannot deposit coins/pay merchant if wire fees are not set up
