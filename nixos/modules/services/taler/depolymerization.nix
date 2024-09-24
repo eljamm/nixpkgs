@@ -11,10 +11,15 @@ let
 
   cfg = cfgTaler.depolymerization;
   cfgTaler = config.services.taler;
+
+  talerComponent = "depolymerization";
+  dbName = "taler-${talerComponent}-httpd";
+
+  inherit (cfgTaler) runtimeDir;
 in
 
 talerUtils.mkTalerModule rec {
-  talerComponent = "depolymerization";
+  inherit talerComponent;
 
   # Services that need access to the DB
   # https://git.taler.net/depolymerization.git/about/
@@ -39,12 +44,17 @@ talerUtils.mkTalerModule rec {
             DB_URL = lib.mkOption {
               type = lib.types.str;
               internal = true;
-              default = "postgres:///taler-depolymerization";
+              default = "postgres://%2Fvar%2Frun%2Fpostgresql/${dbName}?user=${dbName}";
             };
             PORT = lib.mkOption {
               type = lib.types.port;
               default = 8084;
               description = "Port on which the HTTP server listens.";
+            };
+            CONF_PATH = lib.mkOption {
+              type = lib.types.str;
+              internal = true;
+              default = "/etc/taler/taler.conf";
             };
           };
         };
@@ -55,11 +65,13 @@ talerUtils.mkTalerModule rec {
 
   extraConfig = {
     services.taler.settings.taler.CURRENCY = "BITCOINBTC";
+
+    # TODO: requires `bitcoind` with `txindex` to be running
+    # services.bitcoind.taler.enable = true;
   };
 
   extraServices = [
     # Database Initialisation
-    # FIX: panics at `btc-wire/src/rpc_utils.rs:51:50`
     {
       "taler-${talerComponent}-dbinit" = {
         path = [
@@ -71,13 +83,13 @@ talerUtils.mkTalerModule rec {
         requires = [ "postgresql.service" ];
         after = [ "postgresql.service" ];
         script = ''
-          ${lib.getExe' cfg.package "btc-wire"} initdb
-          ${lib.getExe' cfg.package "btc-wire"} initwallet
+          ${lib.getExe' cfg.package "btc-wire"} initdb -c ${cfgTaler.configFile}
+          ${lib.getExe' cfg.package "btc-wire"} initwallet -c ${cfgTaler.configFile}
         '';
         serviceConfig = {
           Type = "oneshot";
           DynamicUser = true;
-          User = "taler-${talerComponent}";
+          User = dbName;
         };
       };
     }
