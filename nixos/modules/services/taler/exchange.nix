@@ -140,10 +140,10 @@ talerUtils.mkTalerModule rec {
     };
   };
 
-  dbInitScript =
+  # Taken from https://docs.taler.net/taler-exchange-manual.html#exchange-database-setup
+  # TODO: Why does aggregator need DELETE?
+  dbInit.script =
     let
-      # Taken from https://docs.taler.net/taler-exchange-manual.html#exchange-database-setup
-      # TODO: Why does aggregator need DELETE?
       deletePerm = name: lib.optionalString (name == "aggregator") ",DELETE";
       dbScript = pkgs.writers.writeText "taler-exchange-db-permissions.sql" (
         lib.pipe servicesDB [
