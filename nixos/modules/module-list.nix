@@ -1354,7 +1354,6 @@
   ./services/system/uptimed.nix
   ./services/system/userborn.nix
   ./services/system/zram-generator.nix
-  ./services/taler/depolymerization.nix
   ./services/taler/exchange.nix
   ./services/taler/merchant.nix
   ./services/taler/module.nix

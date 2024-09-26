@@ -178,32 +178,6 @@ rec {
           environment.systemPackages = [ pkgs.taler-wallet-core ];
         };
       };
-
-    # TODO: still does not work properly
-    depolymerization =
-      { config, ... }:
-      mkNode {
-        sshPort = 5555;
-        webuiPort = 8084;
-
-        nodeSettings = {
-          services.taler = {
-            settings.taler.CURRENCY = "BITCOINBTC";
-            depolymerization = {
-              enable = true;
-              debug = true;
-              settings = {
-                depolymerizer-bitcoin = {
-                  AUTH_METHOD = "basic";
-                  AUTH_TOKEN = "YWRtaW46cGFzc3dvcmQ=";
-                };
-              };
-            };
-          };
-          networking.firewall.enable = false;
-          environment.systemPackages = [ config.services.taler.depolymerization.package ];
-        };
-      };
   };
 
 }
