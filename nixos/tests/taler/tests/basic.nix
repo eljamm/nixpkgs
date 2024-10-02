@@ -25,8 +25,8 @@ import ../../make-test-python.nix (
       let
         cfgScripts = pkgs.callPackage ../common/scripts.nix { inherit lib pkgs nodes; };
 
-        inherit (cfgNodes) CURRENCY;
-        inherit (cfgScripts) commonScripts nexus_fake_incoming;
+        inherit (cfgNodes) CURRENCY FIAT_CURRENCY;
+        inherit (cfgScripts) commonScripts;
 
         bankConfig = nodes.bank.services.libeufin.configFile.outPath;
         bankSettings = nodes.bank.services.libeufin.settings.libeufin-bank;
@@ -66,6 +66,31 @@ import ../../make-test-python.nix (
                 register_bank_account("testUser", "testUser", "User")
                 register_bank_account("exchange", "exchange", "Exchange")
                 register_bank_account("merchant", "merchant", "Merchant")
+
+            # Setup Nexus ebics keys
+            systemd_run(bank, "libeufin-nexus ebics-setup -L debug -c /etc/libeufin/libeufin.conf", "libeufin-nexus")
+
+            # Set currency conversion rates (1:1)
+            curl(bank, [
+                "curl -X POST",
+                "-H 'Content-Type: application/json'",
+                "-u ${AUSER}:${APASS}",
+                """
+                --data '{
+                  "cashin_ratio": "1",
+                  "cashin_fee": "${CURRENCY}:0",
+                  "cashin_tiny_amount": "${CURRENCY}:0.01",
+                  "cashin_rounding_mode": "nearest",
+                  "cashin_min_amount": "${FIAT_CURRENCY}:1",
+                  "cashout_ratio": "1",
+                  "cashout_fee": "${FIAT_CURRENCY}:0",
+                  "cashout_tiny_amount": "${FIAT_CURRENCY}:0.01",
+                  "cashout_rounding_mode": "nearest",
+                  "cashout_min_amount": "${CURRENCY}:1"
+                }'
+                """,
+                "-sSfL 'http://bank:8082/conversion-info/conversion-rate'"
+            ])
 
 
         exchange.start()
@@ -216,13 +241,15 @@ import ../../make-test-python.nix (
             verify_balance(balanceWanted)
 
 
-        # TODO:
-        # with subtest("Nexus fake incoming payment"):
-        #     # Setup ebics keys
-        #     bank.succeed("libeufin-nexus ebics-setup -L debug -c ${bankConfig}")
-        #     # Make fake transaction
-        #     systemd_run(bank, "${nexus_fake_incoming}", "libeufin-nexus")
-        #     wallet_cli("run-until-done")
+        with subtest("Nexus currency conversion withdrawal"):
+            # Make fake transaction
+            response = wallet_cli("""api 'acceptManualWithdrawal' '{ "exchangeBaseUrl":"http://exchange:8081/", "amount":"KUDOS:5" }'""")
+            reservePub = json.loads(response)["result"]["reservePub"]
+
+            systemd_run(bank, f"""libeufin-nexus testing fake-incoming -c ${bankConfig} --amount="${FIAT_CURRENCY}:20" --subject="{reservePub}" "payto://iban/CH4740123RW4167362694" """, "libeufin-nexus")
+            wallet_cli("run-until-done")
+
+        breakpoint()
       '';
   }
 )

@@ -7,9 +7,7 @@
 
 let
   cfgNodes = pkgs.callPackage ./nodes.nix { inherit lib; };
-
   bankConfig = nodes.bank.services.libeufin.configFile.outPath;
-  nexusSettings = nodes.bank.services.libeufin.settings.nexus-ebics;
 
   inherit (cfgNodes) CURRENCY;
 in
@@ -82,22 +80,4 @@ in
           else:
               client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
     '';
-
-  nexus_fake_incoming = pkgs.writeShellScript "nexus_fake_incoming" ''
-    set -eux
-    RESERVE_PUB=$(
-      taler-wallet-cli \
-        api 'acceptManualWithdrawal' \
-          '{"exchangeBaseUrl":"http://exchange:8081/",
-            "amount":"${nexusSettings.CURRENCY}:20"
-           }' | jq -r .result.reservePub
-      )
-
-    libeufin-nexus \
-      testing fake-incoming \
-      -c ${bankConfig} \
-      --amount="${nexusSettings.CURRENCY}:20" \
-      --subject="$RESERVE_PUB" \
-      "payto://iban/CH8389144317421994586"
-  '';
 }

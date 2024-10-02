@@ -41,6 +41,7 @@ let
 in
 rec {
   CURRENCY = "KUDOS";
+  FIAT_CURRENCY = "CHF";
 
   nodes = {
     exchange =
@@ -107,7 +108,7 @@ rec {
 
                 SUGGESTED_WITHDRAWAL_EXCHANGE = "http://exchange:8081/";
 
-                inherit CURRENCY;
+                inherit CURRENCY FIAT_CURRENCY;
               };
             };
           };
