@@ -132,7 +132,8 @@ rec {
                 NAME = "John Smith S.A.";
 
                 # == Optional ==
-                CLIENT_PRIVATE_KEYS_FILE = "/var/lib/libeufin-nexus/client-ebics-keys.json";
+                CLIENT_PRIVATE_KEYS_FILE = "${../conf/client-ebics-keys.json}";
+                BANK_PUBLIC_KEYS_FILE = "${../conf/bank-ebics-keys.json}";
               };
               libeufin-nexusdb-postgres.CONFIG = "postgresql:///libeufin-nexus";
             };
