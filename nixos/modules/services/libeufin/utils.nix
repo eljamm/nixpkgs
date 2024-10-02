@@ -18,7 +18,13 @@
       cfg = cfgMain.${libeufinComponent};
       cfgMain = config.services.libeufin;
 
-      bankServiceName = "libeufin-${libeufinComponent}";
+      servicesGroup = "libeufin-services";
+      serviceName = "libeufin-${libeufinComponent}";
+
+      # TODO: enforce that bank and nexus be in the same db?
+      dbName =
+        lib.removePrefix "postgresql:///"
+          cfg.settings."libeufin-${libeufinComponent}db-postgres".CONFIG;
 
       inherit (cfgMain) stateDir;
     in
@@ -37,20 +43,20 @@
             [
               # Main service
               {
-                "libeufin-${libeufinComponent}" = {
+                "${serviceName}" = {
                   serviceConfig = {
                     DynamicUser = true;
-                    User = bankServiceName;
+                    User = serviceName;
+                    Group = servicesGroup;
+                    SupplementaryGroups = [ servicesGroup ];
                     ExecStart = toString [
-                      (lib.getExe' cfg.package "${bankServiceName}")
+                      (lib.getExe' cfg.package "libeufin-${libeufinComponent}")
                       "serve -c ${cfgMain.configFile}"
                       (lib.optionalString cfg.debug " -L debug")
                     ];
-                    StateDirectory = lib.mkIf (libeufinComponent == "nexus") bankServiceName;
-                    ReadWritePaths = lib.mkIf (libeufinComponent == "nexus") [ "/var/lib/${bankServiceName}" ];
                   };
-                  requires = [ "${bankServiceName}-dbinit.service" ];
-                  after = [ "${bankServiceName}-dbinit.service" ];
+                  requires = [ "libeufin-nexus-dbinit.service" ];
+                  after = [ "libeufin-nexus-dbinit.service" ];
                   wantedBy = [ "multi-user.target" ]; # TODO slice?
                   # Accounts to enable before the bank service starts.
                   preStart =
@@ -77,25 +83,57 @@
               }
               # Database Initialisation
               {
-                "libeufin-${libeufinComponent}-dbinit" = {
-                  path = [ config.services.postgresql.package ];
-                  serviceConfig = {
-                    Type = "oneshot";
-                    DynamicUser = true;
-                    User = bankServiceName;
-                    ExecStart = toString [
-                      (lib.getExe' cfg.package "libeufin-${libeufinComponent}")
-                      "dbinit -c ${cfgMain.configFile}"
-                      (lib.optionalString cfg.debug " -L debug")
-                    ];
+                "${serviceName}-dbinit" =
+                  let
+                    # NOTE: the bank also needs this for currency conversion
+                    dbScript = pkgs.writers.writeText "libeufin-nexus-db-permissions.sql" ''
+                      GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA libeufin_nexus TO "${serviceName}";
+                      GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA libeufin_bank TO "${serviceName}";
+                      GRANT USAGE ON SCHEMA libeufin_nexus TO "${serviceName}";
+                      GRANT USAGE ON SCHEMA libeufin_bank TO "${serviceName}";
+                    '';
+                    # NOTE: the bank and nexus shouldn't initialise the database at the same time
+                    serviceReq =
+                      if (libeufinComponent == "nexus") then
+                        [ "libeufin-bank-dbinit.service" ]
+                      else
+                        [ "postgresql.service" ];
+                  in
+                  {
+                    path = [ config.services.postgresql.package ];
+                    script = ''
+                      ${lib.getExe' cfg.package "libeufin-${libeufinComponent}"} dbinit \
+                        -c ${cfgMain.configFile} \
+                        ${lib.optionalString cfg.debug "-L debug"}
+
+                      psql -f ${dbScript}
+                    '';
+                    serviceConfig = {
+                      Type = "oneshot";
+                      DynamicUser = true;
+                      User = dbName;
+                    };
+                    requires = serviceReq;
+                    after = serviceReq;
                   };
-                  requires = [ "postgresql.service" ];
-                  after = [ "postgresql.service" ];
-                };
               }
             ]
             ++ extraServices
           );
+
+          users.groups.${servicesGroup} = { };
+
+          systemd.tmpfiles.settings = {
+            "10-libeufin-services" = {
+              "${stateDir}" = {
+                d = {
+                  group = servicesGroup;
+                  user = "nobody";
+                  mode = "070";
+                };
+              };
+            };
+          };
 
           services = {
             # enable Libeufin when the component is enabled, add settings to the config file
@@ -105,10 +143,11 @@
 
             postgresql = {
               enable = true;
-              ensureDatabases = [ bankServiceName ];
+              ensureDatabases = [ dbName ];
               ensureUsers = [
+                { name = serviceName; }
                 {
-                  name = bankServiceName;
+                  name = dbName;
                   ensureDBOwnership = true;
                 }
               ];

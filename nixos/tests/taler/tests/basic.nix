@@ -19,7 +19,7 @@ import ../../make-test-python.nix (
         ;
     };
 
-    # TODO: make separate tests (i.e. for each component)?
+    # TODO: make tests for each component?
     testScript =
       { nodes, ... }:
       let
@@ -50,21 +50,21 @@ import ../../make-test-python.nix (
         ${commonScripts}
 
 
-        # NOTE: start components up individually so they don't collide before their setup is done
+        # NOTE: start components up individually so they don't conflict before their setup is done
         bank.start()
         client.start()
         bank.wait_for_open_port(8082)
-
 
         with subtest("Set up Libeufin bank"):
             # Modify admin account password, increase debit threshold
             systemd_run(bank, 'libeufin-bank passwd -c "${bankConfig}" "${AUSER}" "${APASS}"', "libeufin-bank")
             systemd_run(bank, 'libeufin-bank edit-account -c ${bankConfig} --debit_threshold="${bankSettings.CURRENCY}:1000000" ${AUSER}', "libeufin-bank")
 
+            # NOTE: the exchange is enabled before the bank starts using the `initialAccounts` option
+            # TODO: just use that option instead of this?
             with subtest("Register bank accounts"):
                 # username, password, name
                 register_bank_account("testUser", "testUser", "User")
-                register_bank_account("exchange", "exchange", "Exchange")
                 register_bank_account("merchant", "merchant", "Merchant")
 
             # Setup Nexus ebics keys
@@ -156,7 +156,7 @@ import ../../make-test-python.nix (
                 --data '{
                   "product_id": "1",
                   "description": "Product with id 1 and price 1",
-                  "price": "KUDOS:1",
+                  "price": "${CURRENCY}:1",
                   "total_stock": 20,
                   "unit": "packages",
                   "next_restock": { "t_s": "never" }
@@ -215,7 +215,7 @@ import ../../make-test-python.nix (
                     "-H 'Content-Type: application/json'",
                     """
                     --data '{
-                      "order": { "amount": "KUDOS:1", "summary": "Test Order" },
+                      "order": { "amount": "${CURRENCY}:1", "summary": "Test Order" },
                       "inventory_products": [{ "product_id": "1", "quantity": 1 }]
                     }'
                     """,

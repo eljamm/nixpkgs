@@ -9,8 +9,11 @@
 let
   libeufinUtils = import ./utils.nix { inherit lib pkgs config; };
 
+  cfgMain = config.services.libeufin;
+
   # Mandatory configuration values
-  # See https://docs.taler.net/libeufin/nexus-manual.html#setting-up-the-ebics-subscriber
+  # https://docs.taler.net/libeufin/nexus-manual.html#setting-up-the-ebics-subscriber
+  # https://docs.taler.net/libeufin/setup-ebics-at-postfinance.html
   mandatoryOptions = [
     {
       name = "CURRENCY";
@@ -74,7 +77,7 @@ let
   ];
 in
 
-libeufinUtils.mkLibeufinModule rec {
+libeufinUtils.mkLibeufinModule {
   libeufinComponent = "nexus";
 
   extraOptions.services.libeufin.nexus = {
@@ -125,12 +128,11 @@ libeufinUtils.mkLibeufinModule rec {
               '';
             };
           };
-          # TODO: should this be in same DB as the bank?
           libeufin-nexusdb-postgres = {
             CONFIG = lib.mkOption {
               type = lib.types.str;
               internal = true;
-              default = "postgresql:///libeufin-${libeufinComponent}";
+              default = "postgresql:///libeufin-bank";
             };
           };
         };
