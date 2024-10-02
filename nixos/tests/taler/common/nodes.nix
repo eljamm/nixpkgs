@@ -60,13 +60,14 @@ rec {
               enable = true;
               debug = true;
               denominationConfig = lib.readFile ../conf/taler-denominations.conf;
-              enableAccounts = [ ../conf/exchange-account.json ];
-              settings.exchange = {
-                MASTER_PUBLIC_KEY = "2TQSTPFZBC2MC4E52NHPA050YXYG02VC3AB50QESM6JX1QJEYVQ0";
-                BASE_URL = "http://exchange:8081/";
-              };
-              settings.exchange-offline = {
-                MASTER_PRIV_FILE = "${../conf/private.key}";
+              settings = {
+                exchange = {
+                  MASTER_PUBLIC_KEY = "2TQSTPFZBC2MC4E52NHPA050YXYG02VC3AB50QESM6JX1QJEYVQ0";
+                  BASE_URL = "http://exchange:8081/";
+                };
+                exchange-offline = {
+                  MASTER_PRIV_FILE = "${../conf/private.key}";
+                };
               };
             };
           };

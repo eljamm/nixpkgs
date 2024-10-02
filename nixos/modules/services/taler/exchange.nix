@@ -114,20 +114,6 @@ talerUtils.mkTalerModule rec {
         Please see the upstream docs for how to safely do that.
       '';
     };
-    enableAccounts = lib.mkOption {
-      type = lib.types.listOf lib.types.path;
-      # TODO: improve this?
-      description = ''
-        This option enables the specified bank accounts and advertises them as
-        belonging to the exchange.
-
-        To do this, you must pass in each account signature, which you can get
-        by using the `taler-exchange-offline enable-account` command.
-
-        For more details on how to do this, please refer to [taler-exchange-offline(1)](https://docs.taler.net/manpages/taler-exchange-offline.1.html#create-signature-to-enable-bank-account-offline)
-      '';
-      default = [ ];
-    };
   };
 
   extraConfig = {
@@ -159,24 +145,4 @@ talerUtils.mkTalerModule rec {
       ${lib.getExe' cfg.package "taler-exchange-dbinit"}
       psql -f ${dbScript}
     '';
-
-  extraServices = [
-    # TODO: remove this and enableAccounts option as it's not currently
-    # practical and the service doesn't seem to be working
-    {
-      taler-exchange-accounts = lib.mkIf (cfg.enableAccounts != [ ]) {
-        script = lib.pipe cfg.enableAccounts [
-          (map (account: "${lib.getExe' cfg.package "taler-exchange-offline"} upload < ${account}"))
-          (lib.concatStringsSep "\n")
-        ];
-        requires = [ "taler-exchange-dbinit.service" ];
-        after = [ "taler-exchange-dbinit.service" ];
-        serviceConfig = {
-          Type = "oneshot";
-          DynamicUser = true;
-          User = "taler-exchange-httpd";
-        };
-      };
-    }
-  ];
 }
