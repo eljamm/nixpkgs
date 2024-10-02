@@ -10,7 +10,7 @@ let
   libeufinUtils = import ./utils.nix { inherit lib pkgs config; };
 in
 
-libeufinUtils.mkLibeufinModule rec {
+libeufinUtils.mkLibeufinModule {
   libeufinComponent = "bank";
 
   extraOptions.services.libeufin.bank = {
@@ -67,11 +67,25 @@ libeufinUtils.mkLibeufinModule rec {
             CONFIG = lib.mkOption {
               type = lib.types.str;
               internal = true;
-              default = "postgresql:///libeufin-${libeufinComponent}";
+              default = "postgresql:///libeufin-bank";
             };
           };
         };
       };
+    };
+    initialAccounts = lib.mkOption {
+      type = lib.types.listOf lib.types.attrs;
+      internal = true;
+      description = ''
+        Accounts to enable before the bank service starts.
+
+        This is mainly needed for the nexus currency conversion
+        since the exchange's bank account is expected to be already
+        registered.
+
+        Don't forget to change the account passwords afterwards.
+      '';
+      default = [ ];
     };
   };
 }

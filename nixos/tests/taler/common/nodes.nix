@@ -85,6 +85,14 @@ rec {
           services.libeufin.bank = {
             enable = true;
             debug = true;
+            initialAccounts = [
+              {
+                username = "exchange";
+                password = "exchange";
+                name = "Exchange";
+              }
+            ];
+
             settings = {
               libeufin-bank = {
                 WIRE_TYPE = "x-taler-bank";
