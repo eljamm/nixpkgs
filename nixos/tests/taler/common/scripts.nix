@@ -9,7 +9,7 @@ let
   cfgNodes = pkgs.callPackage ./nodes.nix { inherit lib; };
   bankConfig = nodes.bank.services.libeufin.configFile.outPath;
 
-  inherit (cfgNodes) CURRENCY;
+  inherit (cfgNodes) CURRENCY FIAT_CURRENCY;
 in
 {
   commonScripts =
@@ -79,5 +79,24 @@ in
               client.fail(f'echo Wanted balance: "{balanceWanted}", got: "{balanceGot}"')
           else:
               client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
+
+      def verify_conversion(regionalWanted):
+          # Get transaction details
+          response = json.loads(
+              curl(bank, [
+                  "curl -sSfL",
+                  "-u exchange:exchange",
+                  "http://bank:8082/accounts/exchange/transactions"
+              ])
+          )
+          amount = response["transactions"][0]["amount"].split(":") # CURRENCY:VALUE
+          currencyGot = amount[0]
+          regionalGot = amount[1]
+
+          # Check conversion (1:1 ratio)
+          if (regionalGot != str(regionalWanted)) or (currencyGot != "${CURRENCY}"):
+              client.fail(f'echo Wanted "${CURRENCY}:{regionalWanted}", got: "{currencyGot}:{regionalGot}"')
+          else:
+              client.succeed(f'echo Conversion successfully made: "${FIAT_CURRENCY}:{regionalWanted}" -> "{currencyGot}:{regionalGot}"')
     '';
 }

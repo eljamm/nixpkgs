@@ -241,15 +241,18 @@ import ../../make-test-python.nix (
             verify_balance(balanceWanted)
 
 
-        with subtest("Nexus currency conversion withdrawal"):
-            # Make fake transaction
-            response = wallet_cli("""api 'acceptManualWithdrawal' '{ "exchangeBaseUrl":"http://exchange:8081/", "amount":"KUDOS:5" }'""")
+        with subtest("Libeufin nexus currency conversion"):
+            regionalWanted = "20"
+
+            # Make fake transaction (we only need reservePub)
+            response = wallet_cli("""api 'acceptManualWithdrawal' '{ "exchangeBaseUrl":"http://exchange:8081/", "amount":"${CURRENCY}:5" }'""")
             reservePub = json.loads(response)["result"]["reservePub"]
 
-            systemd_run(bank, f"""libeufin-nexus testing fake-incoming -c ${bankConfig} --amount="${FIAT_CURRENCY}:20" --subject="{reservePub}" "payto://iban/CH4740123RW4167362694" """, "libeufin-nexus")
+            # Convert fiat currency to regional (1:1 ratio)
+            systemd_run(bank, f"""libeufin-nexus testing fake-incoming -c ${bankConfig} --amount="${FIAT_CURRENCY}:{regionalWanted}" --subject="{reservePub}" "payto://iban/CH4740123RW4167362694" """, "libeufin-nexus")
             wallet_cli("run-until-done")
 
-        breakpoint()
+            verify_conversion(regionalWanted)
       '';
   }
 )
