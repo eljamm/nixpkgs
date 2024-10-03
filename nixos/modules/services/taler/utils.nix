@@ -58,6 +58,8 @@
                   StateDirectory = name;
                   CacheDirectory = name;
                   ReadWritePaths = [ runtimeDir ];
+                  Restart = "always";
+                  RestartSec = "10s";
                 };
                 requires = [ "taler-${talerComponent}-dbinit.service" ];
                 after = [ "taler-${talerComponent}-dbinit.service" ];
@@ -67,14 +69,16 @@
               (lib.optionalAttrs (dbInit ? script) {
                 "taler-${talerComponent}-dbinit" = {
                   path = [ config.services.postgresql.package ] ++ (lib.optionals (dbInit ? path) dbInit.path);
-                  inherit (dbInit) script;
-                  requires = [ "postgresql.service" ];
-                  after = [ "postgresql.service" ];
                   serviceConfig = {
                     Type = "oneshot";
                     DynamicUser = true;
                     User = dbName;
+                    Restart = "on-failure";
+                    RestartSec = "5s";
                   };
+                  inherit (dbInit) script;
+                  requires = [ "postgresql.service" ];
+                  after = [ "postgresql.service" ];
                 };
               })
             ]
@@ -95,23 +99,20 @@
             };
           };
 
-          services = {
-            # enable Taler when the component is enabled, add settings to the config file
-            # TODO: separate config file for each component and import them in Taler's config?
-            taler = {
-              inherit (cfg) enable settings;
-            };
+          # TODO: separate config file for each component and import them in Taler's main config?
+          services.taler = {
+            inherit (cfg) enable settings;
+          };
 
-            postgresql = {
-              enable = true;
-              ensureDatabases = [ dbName ];
-              ensureUsers = map (service: { name = "taler-${talerComponent}-${service}"; }) servicesDB ++ [
-                {
-                  name = dbName;
-                  ensureDBOwnership = true;
-                }
-              ];
-            };
+          services.postgresql = {
+            enable = true;
+            ensureDatabases = [ dbName ];
+            ensureUsers = map (service: { name = "taler-${talerComponent}-${service}"; }) servicesDB ++ [
+              {
+                name = dbName;
+                ensureDBOwnership = true;
+              }
+            ];
           };
         } extraConfig
       );
