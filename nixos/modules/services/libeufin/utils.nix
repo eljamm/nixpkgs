@@ -21,6 +21,8 @@
       servicesGroup = "libeufin-services";
       serviceName = "libeufin-${libeufinComponent}";
 
+      isNexus = libeufinComponent == "nexus";
+
       # TODO: enforce that bank and nexus be in the same db?
       dbName =
         lib.removePrefix "postgresql:///"
@@ -58,7 +60,9 @@
                   requires = [ "libeufin-nexus-dbinit.service" ];
                   after = [ "libeufin-nexus-dbinit.service" ];
                   wantedBy = [ "multi-user.target" ]; # TODO slice?
-                  # Accounts to enable before the bank service starts.
+                  # Some accounts might need to be registered before the
+                  # service starts, like the exchange when the bank's currency
+                  # conversion is enabled.
                   preStart =
                     let
                       registerAccounts = lib.pipe cfg.initialAccounts [
@@ -74,7 +78,7 @@
                         (lib.concatStringsSep "\n")
                       ];
                     in
-                    lib.mkIf (libeufinComponent == "bank") ''
+                    lib.mkIf (!isNexus) ''
                       if [ ! -e ${stateDir}/init ]; then
                         ${registerAccounts}
                       fi
@@ -85,22 +89,26 @@
               {
                 "${serviceName}-dbinit" =
                   let
-                    # NOTE: the bank also needs this for currency conversion
+                    # needed for currency conversion
                     dbScript = pkgs.writers.writeText "libeufin-nexus-db-permissions.sql" ''
                       GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA libeufin_nexus TO "${serviceName}";
                       GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA libeufin_bank TO "${serviceName}";
                       GRANT USAGE ON SCHEMA libeufin_nexus TO "${serviceName}";
                       GRANT USAGE ON SCHEMA libeufin_bank TO "${serviceName}";
                     '';
-                    # NOTE: the bank and nexus shouldn't initialise the database at the same time
-                    serviceReq =
-                      if (libeufinComponent == "nexus") then
-                        [ "libeufin-bank-dbinit.service" ]
-                      else
-                        [ "postgresql.service" ];
+
+                    # the bank and nexus shouldn't initialise the database at the same time
+                    serviceReq = if isNexus then [ "libeufin-bank-dbinit.service" ] else [ "postgresql.service" ];
                   in
                   {
                     path = [ config.services.postgresql.package ];
+                    serviceConfig = {
+                      Type = "oneshot";
+                      DynamicUser = true;
+                      User = dbName;
+                      Restart = "on-failure";
+                      RestartSec = "5s";
+                    };
                     script = ''
                       ${lib.getExe' cfg.package "libeufin-${libeufinComponent}"} dbinit \
                         -c ${cfgMain.configFile} \
@@ -108,11 +116,6 @@
 
                       psql -f ${dbScript}
                     '';
-                    serviceConfig = {
-                      Type = "oneshot";
-                      DynamicUser = true;
-                      User = dbName;
-                    };
                     requires = serviceReq;
                     after = serviceReq;
                   };
@@ -135,23 +138,20 @@
             };
           };
 
-          services = {
-            # enable Libeufin when the component is enabled, add settings to the config file
-            libeufin = {
-              inherit (cfg) enable settings;
-            };
+          services.libeufin = {
+            inherit (cfg) enable settings;
+          };
 
-            postgresql = {
-              enable = true;
-              ensureDatabases = [ dbName ];
-              ensureUsers = [
-                { name = serviceName; }
-                {
-                  name = dbName;
-                  ensureDBOwnership = true;
-                }
-              ];
-            };
+          services.postgresql = {
+            enable = true;
+            ensureDatabases = [ dbName ];
+            ensureUsers = [
+              { name = serviceName; }
+              {
+                name = dbName;
+                ensureDBOwnership = true;
+              }
+            ];
           };
         } extraConfig
       );

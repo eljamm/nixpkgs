@@ -90,8 +90,8 @@ libeufinUtils.mkLibeufinModule {
       type = lib.types.submodule {
         inherit (options.services.libeufin.settings.type.nestedTypes) freeformType;
         options = {
-          nexus-ebics =
-            lib.pipe mandatoryOptions [
+          nexus-ebics = lib.mergeAttrsList [
+            (lib.pipe mandatoryOptions [
               (map (option: {
                 inherit (option) name;
                 value = lib.mkOption {
@@ -102,8 +102,8 @@ libeufinUtils.mkLibeufinModule {
                 };
               }))
               lib.listToAttrs
-            ]
-            // {
+            ])
+            {
               BANK_PUBLIC_KEYS_FILE = lib.mkOption {
                 type = lib.types.str;
                 default = "${cfgMain.stateDir}/bank-ebics-keys.json";
@@ -118,7 +118,8 @@ libeufinUtils.mkLibeufinModule {
                   Filesystem location where Nexus should store the subscriber private keys.
                 '';
               };
-            };
+            }
+          ];
           nexus-httpd = {
             PORT = lib.mkOption {
               type = lib.types.port;
