@@ -119,7 +119,7 @@
                         -c ${cfgMain.configFile} \
                         ${lib.optionalString cfg.debug "-L debug"}
 
-                      psql -f ${dbScript}
+                      psql -U ${dbName} -f ${dbScript}
                     '';
                     requires = serviceReq;
                     after = serviceReq;
