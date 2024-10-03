@@ -143,6 +143,6 @@ talerUtils.mkTalerModule rec {
     in
     ''
       ${lib.getExe' cfg.package "taler-exchange-dbinit"}
-      psql -f ${dbScript}
+      psql -U taler-${talerComponent}-httpd -f ${dbScript}
     '';
 }
