@@ -9,8 +9,6 @@
 let
   libeufinUtils = import ./utils.nix { inherit lib pkgs config; };
 
-  cfgMain = config.services.libeufin;
-
   # Mandatory configuration values
   # https://docs.taler.net/libeufin/nexus-manual.html#setting-up-the-ebics-subscriber
   # https://docs.taler.net/libeufin/setup-ebics-at-postfinance.html
@@ -106,14 +104,14 @@ libeufinUtils.mkLibeufinModule {
             {
               BANK_PUBLIC_KEYS_FILE = lib.mkOption {
                 type = lib.types.str;
-                default = "${cfgMain.stateDir}/bank-ebics-keys.json";
+                default = "/var/lib/libeufin-nexus/bank-ebics-keys.json";
                 description = ''
                   Filesystem location where Nexus should store the bank public keys.
                 '';
               };
               CLIENT_PRIVATE_KEYS_FILE = lib.mkOption {
                 type = lib.types.str;
-                default = "${cfgMain.stateDir}/client-ebics-keys.json";
+                default = "/var/lib/libeufin-nexus/client-ebics-keys.json";
                 description = ''
                   Filesystem location where Nexus should store the subscriber private keys.
                 '';
