@@ -18,17 +18,17 @@
       cfg = cfgMain.${libeufinComponent};
       cfgMain = config.services.libeufin;
 
-      servicesGroup = "libeufin-services";
+      # TODO: make into options?
       serviceName = "libeufin-${libeufinComponent}";
+      servicesGroup = "libeufin-services";
 
       isNexus = libeufinComponent == "nexus";
 
+      # get database name from config
       # TODO: enforce that bank and nexus be in the same db?
       dbName =
         lib.removePrefix "postgresql:///"
           cfg.settings."libeufin-${libeufinComponent}db-postgres".CONFIG;
-
-      inherit (cfgMain) stateDir;
     in
     {
       options = lib.recursiveUpdate {
@@ -47,16 +47,17 @@
               {
                 "${serviceName}" = {
                   serviceConfig = {
-                    DynamicUser = true;
                     User = serviceName;
                     Group = servicesGroup;
-                    SupplementaryGroups = [ servicesGroup ];
+                    StateDirectory = serviceName;
+                    StateDirectoryMode = "0750";
                     ExecStart = toString [
                       (lib.getExe' cfg.package "libeufin-${libeufinComponent}")
                       "serve -c ${cfgMain.configFile}"
                       (lib.optionalString cfg.debug " -L debug")
                     ];
                   };
+                  # bank's dbinit starts first, then nexus after
                   requires = [ "libeufin-nexus-dbinit.service" ];
                   after = [ "libeufin-nexus-dbinit.service" ];
                   wantedBy = [ "multi-user.target" ]; # TODO slice?
@@ -79,8 +80,12 @@
                       ];
                     in
                     lib.mkIf (!isNexus) ''
-                      if [ ! -e ${stateDir}/init ]; then
+                      # only register initial accounts once
+                      if [ ! -e /var/lib/${serviceName}/init ]; then
                         ${registerAccounts}
+
+                        touch /var/lib/${serviceName}/init
+                        echo "Bank initialisation complete"
                       fi
                     '';
                 };
@@ -125,17 +130,10 @@
           );
 
           users.groups.${servicesGroup} = { };
-
-          systemd.tmpfiles.settings = {
-            "10-libeufin-services" = {
-              "${stateDir}" = {
-                d = {
-                  group = servicesGroup;
-                  user = "nobody";
-                  mode = "070";
-                };
-              };
-            };
+          users.users.${serviceName} = {
+            createHome = false;
+            isSystemUser = true;
+            group = servicesGroup;
           };
 
           services.libeufin = {

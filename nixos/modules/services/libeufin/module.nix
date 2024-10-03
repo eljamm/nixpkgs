@@ -22,16 +22,6 @@ in
       type = lib.types.submodule { freeformType = settingsFormat.type; };
       default = { };
     };
-    stateDir = lib.mkOption {
-      type = lib.types.str;
-      internal = true;
-      default = "/var/lib/libeufin";
-      description = ''
-        State directory shared between the taler services.
-
-        The libeufin Nexus stores its client and bank keys here.
-      '';
-    };
   };
 
   config = lib.mkIf cfg.enable {
