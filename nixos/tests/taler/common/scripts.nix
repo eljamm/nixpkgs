@@ -13,18 +13,16 @@ let
 in
 {
   commonScripts =
-    # NOTE: for NeoVim formatting and highlights. Remove later.
     # python
     ''
-      # Join curl commands
-      # TODO: add option for expected return code or is `succeed()` and `fail()` enough?
-      def curl(machine, commands):
-          # flatten multi-line commands
-          flattened_commands = [c.replace("\n", "") for c in commands]
+      def succeed(machine, commands):
+          """A more convenient `machine.succeed` that supports multi-line inputs"""
+          flattened_commands = [c.replace("\n", "") for c in commands] # flatten multi-line
           return machine.succeed(" ".join(flattened_commands))
 
-      # Execute command as systemd DynamicUser
+
       def systemd_run(machine, cmd, user="nobody", group="nobody"):
+          """Execute command as a systemd DynamicUser"""
           machine.log(f"Executing command (via systemd-run): \"{cmd}\"")
 
           (status, out) = machine.execute( " ".join([
@@ -46,7 +44,9 @@ in
 
           machine.log("systemd-run finished successfully")
 
+
       def register_bank_account(username, password, name, is_exchange=False):
+          """Register Libeufin bank account for the x-taler-bank wire method"""
           return systemd_run(bank, " ".join([
               'libeufin-bank',
               'create-account',
@@ -59,15 +59,18 @@ in
               ]),
               user="libeufin-bank")
 
-      # Wallet wrapper
+
       def wallet_cli(command):
+          """Wrapper for the Taler CLI wallet"""
           return client.succeed(
               "taler-wallet-cli "
               "--no-throttle "    # don't do any request throttling
               + command
           )
 
-      def verify_balance(balanceWanted):
+
+      def verify_balance(balanceWanted: str):
+          """Compare Taler CLI wallet balance with expected amount"""
           balance = wallet_cli("balance --json")
           try:
               balanceGot = json.loads(balance)["balances"][0]["available"]
@@ -80,21 +83,23 @@ in
           else:
               client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
 
-      def verify_conversion(regionalWanted):
+
+      def verify_conversion(regionalWanted: str):
+          """Compare converted Libeufin Nexus funds with expected regional currency"""
           # Get transaction details
           response = json.loads(
-              curl(bank, [
+              succeed(bank, [
                   "curl -sSfL",
+                  # TODO: get exchange from config?
                   "-u exchange:exchange",
                   "http://bank:8082/accounts/exchange/transactions"
               ])
           )
           amount = response["transactions"][0]["amount"].split(":") # CURRENCY:VALUE
-          currencyGot = amount[0]
-          regionalGot = amount[1]
+          currencyGot, regionalGot = amount
 
           # Check conversion (1:1 ratio)
-          if (regionalGot != str(regionalWanted)) or (currencyGot != "${CURRENCY}"):
+          if (regionalGot != regionalWanted) or (currencyGot != "${CURRENCY}"):
               client.fail(f'echo Wanted "${CURRENCY}:{regionalWanted}", got: "{currencyGot}:{regionalGot}"')
           else:
               client.succeed(f'echo Conversion successfully made: "${FIAT_CURRENCY}:{regionalWanted}" -> "{currencyGot}:{regionalGot}"')

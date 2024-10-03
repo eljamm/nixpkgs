@@ -4,6 +4,12 @@ import ../../make-test-python.nix (
     cfgNodes = pkgs.callPackage ../common/nodes.nix { inherit lib; };
   in
   {
+    # NOTE: Test requires internet access for Nexus currency conversion. As such, you must run it interactively:
+    # - nix run .#nixosTests.taler.basic.driverInteractive
+    # - run_tests()
+
+    # TODO: is it possible to only run Nexus test if VM is interactive?
+
     name = "Taler Basic Test";
     meta = {
       maintainers = [ ];
@@ -41,7 +47,6 @@ import ../../make-test-python.nix (
         exchangeAccount = ../conf/exchange-account.json;
       in
 
-      # NOTE: for NeoVim formatting and highlights. Remove later.
       # python
       ''
         import json
@@ -66,31 +71,6 @@ import ../../make-test-python.nix (
                 # username, password, name
                 register_bank_account("testUser", "testUser", "User")
                 register_bank_account("merchant", "merchant", "Merchant")
-
-            # Setup Nexus ebics keys
-            systemd_run(bank, "libeufin-nexus ebics-setup -L debug -c /etc/libeufin/libeufin.conf", "libeufin-nexus")
-
-            # Set currency conversion rates (1:1)
-            curl(bank, [
-                "curl -X POST",
-                "-H 'Content-Type: application/json'",
-                "-u ${AUSER}:${APASS}",
-                """
-                --data '{
-                  "cashin_ratio": "1",
-                  "cashin_fee": "${CURRENCY}:0",
-                  "cashin_tiny_amount": "${CURRENCY}:0.01",
-                  "cashin_rounding_mode": "nearest",
-                  "cashin_min_amount": "${FIAT_CURRENCY}:1",
-                  "cashout_ratio": "1",
-                  "cashout_fee": "${FIAT_CURRENCY}:0",
-                  "cashout_tiny_amount": "${FIAT_CURRENCY}:0.01",
-                  "cashout_rounding_mode": "nearest",
-                  "cashout_min_amount": "${CURRENCY}:1"
-                }'
-                """,
-                "-sSfL 'http://bank:8082/conversion-info/conversion-rate'"
-            ])
 
 
         exchange.start()
@@ -117,7 +97,7 @@ import ../../make-test-python.nix (
 
         with subtest("Set up merchant"):
             # Create default instance (similar to admin)
-            curl(merchant, [
+            succeed(merchant, [
                 "curl -X POST",
                 "-H 'Authorization: Bearer secret-token:super_secret'",
                 """
@@ -136,7 +116,7 @@ import ../../make-test-python.nix (
                 "-sSfL 'http://merchant:8083/management/instances'"
             ])
             # Register bank account address
-            curl(merchant, [
+            succeed(merchant, [
                 "curl -X POST",
                 "-H 'Content-Type: application/json'",
                 """
@@ -149,7 +129,7 @@ import ../../make-test-python.nix (
                 "-sSfL 'http://merchant:8083/private/accounts'"
             ])
             # Register a new product to be ordered
-            curl(merchant, [
+            succeed(merchant, [
                 "curl -X POST",
                 "-H 'Content-Type: application/json'",
                 """
@@ -180,7 +160,7 @@ import ../../make-test-python.nix (
 
             # Request withdrawal from the bank
             withdrawal = json.loads(
-                curl(client, [
+                succeed(client, [
                     "curl -X POST",
                     "-u ${TUSER}:${TPASS}",
                     "-H 'Content-Type: application/json'",
@@ -192,7 +172,7 @@ import ../../make-test-python.nix (
             # Accept & confirm withdrawal
             with subtest("Accept & confirm withdrawal"):
                 wallet_cli(f"withdraw accept-uri {withdrawal["taler_withdraw_uri"]} --exchange http://exchange:8081/")
-                curl(client, [
+                succeed(client, [
                     "curl -X POST",
                     "-u ${TUSER}:${TPASS}",
                     "-H 'Content-Type: application/json'",
@@ -210,7 +190,7 @@ import ../../make-test-python.nix (
 
             # Create an order to be paid
             response = json.loads(
-                curl(merchant, [
+                succeed(merchant, [
                     "curl -X POST",
                     "-H 'Content-Type: application/json'",
                     """
@@ -227,7 +207,7 @@ import ../../make-test-python.nix (
 
             # Get order pay URI
             response = json.loads(
-                curl(merchant, [
+                succeed(merchant, [
                     "curl -sSfL",
                     f"http://merchant:8083/private/orders/{order_id}"
                 ])
@@ -241,14 +221,39 @@ import ../../make-test-python.nix (
             verify_balance(balanceWanted)
 
 
-        with subtest("Libeufin nexus currency conversion"):
+        with subtest("Libeufin Nexus currency conversion"):
             regionalWanted = "20"
+
+            # Setup Nexus ebics keys
+            systemd_run(bank, "libeufin-nexus ebics-setup -L debug -c /etc/libeufin/libeufin.conf", "libeufin-nexus")
+
+            # Set currency conversion rates (1:1)
+            succeed(bank, [
+                "curl -X POST",
+                "-H 'Content-Type: application/json'",
+                "-u ${AUSER}:${APASS}",
+                """
+                --data '{
+                  "cashin_ratio": "1",
+                  "cashin_fee": "${CURRENCY}:0",
+                  "cashin_tiny_amount": "${CURRENCY}:0.01",
+                  "cashin_rounding_mode": "nearest",
+                  "cashin_min_amount": "${FIAT_CURRENCY}:1",
+                  "cashout_ratio": "1",
+                  "cashout_fee": "${FIAT_CURRENCY}:0",
+                  "cashout_tiny_amount": "${FIAT_CURRENCY}:0.01",
+                  "cashout_rounding_mode": "nearest",
+                  "cashout_min_amount": "${CURRENCY}:1"
+                }'
+                """,
+                "-sSfL 'http://bank:8082/conversion-info/conversion-rate'"
+            ])
 
             # Make fake transaction (we only need reservePub)
             response = wallet_cli("""api 'acceptManualWithdrawal' '{ "exchangeBaseUrl":"http://exchange:8081/", "amount":"${CURRENCY}:5" }'""")
             reservePub = json.loads(response)["result"]["reservePub"]
 
-            # Convert fiat currency to regional (1:1 ratio)
+            # Convert fiat currency to regional
             systemd_run(bank, f"""libeufin-nexus testing fake-incoming -c ${bankConfig} --amount="${FIAT_CURRENCY}:{regionalWanted}" --subject="{reservePub}" "payto://iban/CH4740123RW4167362694" """, "libeufin-nexus")
             wallet_cli("run-until-done")
 
