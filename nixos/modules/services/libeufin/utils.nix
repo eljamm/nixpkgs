@@ -36,6 +36,7 @@
           enable = lib.mkEnableOption "libeufin core banking system and web interface";
           package = lib.mkPackageOption pkgs "libeufin" { };
           debug = lib.mkEnableOption "debug logging";
+          openFirewall = lib.mkEnableOption "Open ports in the firewall";
         };
       } extraOptions;
 
@@ -135,6 +136,14 @@
             isSystemUser = true;
             group = servicesGroup;
           };
+
+          networking.firewall = lib.mkIf cfg.openFirewall {
+            allowedTCPPorts = [
+              cfg.settings."${if isNexus then "nexus-httpd" else "libeufin-bank"}".PORT
+            ];
+          };
+
+          environment.systemPackages = [ cfg.package ];
 
           services.libeufin = {
             inherit (cfg) enable settings;
