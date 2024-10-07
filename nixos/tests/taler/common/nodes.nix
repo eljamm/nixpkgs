@@ -59,6 +59,7 @@ rec {
             exchange = {
               enable = true;
               debug = true;
+              openFirewall = true;
               denominationConfig = lib.readFile ../conf/taler-denominations.conf;
               settings = {
                 exchange = {
@@ -71,8 +72,6 @@ rec {
               };
             };
           };
-          networking.firewall.enable = false;
-          environment.systemPackages = [ config.services.taler.exchange.package ];
         };
       };
 
@@ -86,6 +85,7 @@ rec {
           services.libeufin.bank = {
             enable = true;
             debug = true;
+            openFirewall = true;
             initialAccounts = [
               {
                 username = "exchange";
@@ -128,6 +128,7 @@ rec {
           services.libeufin.nexus = {
             enable = true;
             debug = true;
+            openFirewall = true;
             settings = {
               # https://docs.taler.net/libeufin/setup-ebics-at-postfinance.html
               nexus-ebics = {
@@ -151,8 +152,6 @@ rec {
               };
             };
           };
-          networking.firewall.enable = false;
-          environment.systemPackages = [ config.services.libeufin.bank.package ];
         };
       };
 
@@ -170,6 +169,7 @@ rec {
             merchant = {
               enable = true;
               debug = true;
+              openFirewall = true;
               settings.merchant-exchange-test = {
                 EXCHANGE_BASE_URL = "http://exchange:8081/";
                 MASTER_KEY = "2TQSTPFZBC2MC4E52NHPA050YXYG02VC3AB50QESM6JX1QJEYVQ0";
@@ -177,8 +177,6 @@ rec {
               };
             };
           };
-          networking.firewall.enable = false;
-          environment.systemPackages = [ config.services.taler.merchant.package ];
         };
       };
 
@@ -188,7 +186,6 @@ rec {
         sshPort = 4444;
 
         nodeSettings = {
-          networking.firewall.enable = false;
           environment.systemPackages = [ pkgs.taler-wallet-core ];
         };
       };
