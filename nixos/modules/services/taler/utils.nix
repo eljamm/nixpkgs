@@ -36,6 +36,7 @@
           package = lib.mkPackageOption pkgs "taler-${talerComponent}" { };
           # TODO: make option accept multiple debugging levels?
           debug = lib.mkEnableOption "debug logging";
+          openFirewall = lib.mkEnableOption "Open ports in the firewall";
         };
       } extraOptions;
 
@@ -98,6 +99,12 @@
               };
             };
           };
+
+          networking.firewall = lib.mkIf cfg.openFirewall {
+            allowedTCPPorts = [ cfg.settings."${talerComponent}".PORT ];
+          };
+
+          environment.systemPackages = [ cfg.package ];
 
           # TODO: separate config file for each component and import them in Taler's main config?
           services.taler = {
