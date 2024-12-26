@@ -84,7 +84,8 @@ stdenv.mkDerivation (finalAttrs: {
     owner = "llvm";
     repo = "llvm-project";
     rev = "e21dc4bd5474d04b8e62d7331362edcc5648d7e5";
-    hash = "sha256-LD4nIjZTSZJtbgW6tZopbTF5Mq0Tenj2gbuPXhtOeUI=";
+    hash = "sha256-rJ0WDRDsJByZJ/xjOqD8FLu7+OLxZOwFv/lLLp5gbYk=";
+    leaveDotGit = true; # test fails otherwise
   };
 
   nativeBuildInputs =
