@@ -45,10 +45,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "screeninfo" ];
 
-  meta = with lib; {
+  meta = {
     description = "Fetch location and size of physical screens";
     homepage = "https://github.com/rr-/screeninfo";
-    license = licenses.mit;
-    maintainers = with maintainers; [ nickhu ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ nickhu ];
   };
 }
