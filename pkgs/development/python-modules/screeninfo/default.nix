@@ -46,7 +46,6 @@ buildPythonPackage rec {
   pythonImportsCheck = [ "screeninfo" ];
 
   meta = with lib; {
-    broken = stdenv.hostPlatform.isDarwin;
     description = "Fetch location and size of physical screens";
     homepage = "https://github.com/rr-/screeninfo";
     license = licenses.mit;
