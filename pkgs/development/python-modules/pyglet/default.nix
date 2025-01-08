@@ -9,7 +9,6 @@
   libGLU,
   xorg,
   pytestCheckHook,
-  glibc,
   gtk2-x11,
   gdk-pixbuf,
   fontconfig,
@@ -53,7 +52,7 @@ buildPythonPackage rec {
               elif name == 'GLU':
                   path = '${libGLU}/lib/libGLU${ext}'
               elif name == 'c':
-                  path = '${glibc}/lib/libc${ext}.6'
+                  path = '${stdenv.cc.libc}/lib/libc${ext}.6'
               elif name == 'X11':
                   path = '${xorg.libX11}/lib/libX11${ext}'
               elif name == 'gdk-x11-2.0':
