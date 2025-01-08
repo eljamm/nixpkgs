@@ -82,6 +82,5 @@ buildPythonPackage rec {
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ c0deaddict ];
     inherit (mesa.meta) platforms;
-    broken = stdenv.hostPlatform.isDarwin;
   };
 }
