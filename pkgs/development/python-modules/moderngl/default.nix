@@ -7,6 +7,7 @@
   setuptools,
   glcontext,
   pythonOlder,
+  mesa,
 }:
 
 buildPythonPackage rec {
@@ -41,7 +42,6 @@ buildPythonPackage rec {
     changelog = "https://github.com/moderngl/moderngl/releases/tag/${version}";
     license = licenses.mit;
     maintainers = with maintainers; [ c0deaddict ];
-    # should be mesa.meta.platforms, darwin build breaks.
-    platforms = platforms.linux;
+    inherit (mesa.meta) platforms;
   };
 }
