@@ -5,6 +5,7 @@
   setuptools,
   libGL,
   libX11,
+  mesa,
 }:
 
 buildPythonPackage rec {
@@ -46,7 +47,7 @@ buildPythonPackage rec {
     homepage = "https://github.com/moderngl/glcontext";
     description = "OpenGL implementation for ModernGL";
     license = licenses.mit;
-    platforms = platforms.linux;
     maintainers = [ ];
+    inherit (mesa.meta) platforms;
   };
 }
