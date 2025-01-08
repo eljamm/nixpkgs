@@ -9,6 +9,7 @@
   poetry-core,
   pytestCheckHook,
   pythonOlder,
+  pyobjc-core,
 }:
 
 buildPythonPackage rec {
@@ -24,6 +25,8 @@ buildPythonPackage rec {
     tag = version;
     hash = "sha256-TEy4wff0eRRkX98yK9054d33Tm6G6qWrd9Iv+ITcFmA=";
   };
+
+  dependencies = lib.optionals stdenv.hostPlatform.isDarwin [ pyobjc-core ];
 
   nativeBuildInputs = [ poetry-core ];
 
