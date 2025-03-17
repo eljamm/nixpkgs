@@ -1808,6 +1808,22 @@ let
         };
       };
 
+      ethersync.ethersync = buildVscodeMarketplaceExtension {
+        mktplcRef = {
+          name = "ethersync";
+          publisher = "ethersync";
+          version = "0.2.1";
+          hash = "sha256-/oRpoYMWSpkAEM89KlJnSJ7TWwcGloYHXh80Ml+vz+M=";
+        };
+        meta = {
+          description = "System for editor-agnostic, real-time collaborative editing of local text files";
+          downloadPage = "https://marketplace.visualstudio.com/items?itemName=ethersync.ethersync";
+          homepage = "https://github.com/ethersync/ethersync";
+          license = lib.licenses.agpl3Only;
+          maintainers = lib.teams.ngi.members;
+        };
+      };
+
       eugleo.magic-racket = callPackage ./eugleo.magic-racket { };
 
       ExiaHuang.dictionary = buildVscodeMarketplaceExtension {
