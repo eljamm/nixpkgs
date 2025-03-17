@@ -4470,6 +4470,19 @@ final: prev:
     meta.hydraPlatforms = [ ];
   };
 
+  ethersync = buildVimPlugin {
+    pname = "ethersync";
+    version = "2025-02-04";
+    src = fetchFromGitHub {
+      owner = "ethersync";
+      repo = "ethersync";
+      rev = "3a1cff2a2cb620ede3eb29fafcf43c718dd75c4d";
+      sha256 = "133bcf7sim4q65c70r6yaf0m3yi2ymx3zw06cjgamr3wm19a0pgf";
+    };
+    meta.homepage = "https://github.com/ethersync/ethersync/";
+    meta.hydraPlatforms = [ ];
+  };
+
   eva01-vim = buildVimPlugin {
     pname = "eva01.vim";
     version = "2024-12-31";
