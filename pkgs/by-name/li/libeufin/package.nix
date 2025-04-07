@@ -115,7 +115,7 @@ stdenv.mkDerivation (finalAttrs: {
     homepage = "https://git.taler.net/libeufin.git/";
     description = "Integration and sandbox testing for FinTech APIs and data formats";
     license = lib.licenses.agpl3Plus;
-    maintainers = with lib.maintainers; [ atemu ];
+    maintainers = with lib.maintainers; [ atemu ] ++ lib.teams.ngi.members;
     mainProgram = "libeufin-bank";
     sourceProvenance = with lib.sourceTypes; [
       fromSource
