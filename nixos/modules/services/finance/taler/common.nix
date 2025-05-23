@@ -62,36 +62,60 @@ in
           StateDirectory = name;
           CacheDirectory = name;
           ReadWritePaths = [ runtimeDir ];
-          Restart = "always";
-          RestartSec = "10s";
         };
-        requires = [ "taler-${talerComponent}-dbinit.service" ];
-        after = [ "taler-${talerComponent}-dbinit.service" ];
+        requires = [
+          "postgresql.service"
+          (lib.optionalString (name != "httpd") "taler-${talerComponent}-httpd.service")
+        ];
+        after = [
+          "postgresql.service"
+          (lib.optionalString (name != "httpd") "taler-${talerComponent}-httpd.service")
+        ];
         wantedBy = [ "multi-user.target" ]; # TODO slice?
         documentation = [
           "man:taler-${talerComponent}-${name}(1)"
           "info:taler-${talerComponent}"
         ];
+        path = [
+          config.services.postgresql.package
+          pkgs.rsync
+        ];
+        preStart =
+          let
+            deletePerm = name: lib.optionalString (name == "aggregator") ",DELETE";
+            dbScript = pkgs.writers.writeText "taler-exchange-db-permissions.sql" (
+              lib.pipe servicesDB [
+                (map (name: ''
+                  GRANT SELECT,INSERT,UPDATE${deletePerm name} ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-${name}";
+                  GRANT USAGE ON ALL SEQUENCES IN SCHEMA exchange TO "taler-exchange-${name}";
+                ''))
+                lib.concatStrings
+              ]
+            );
+          in
+          lib.mkIf (name == "httpd") ''
+            rsync -a --chmod=u=rwX,go=rX /etc/taler/exhcange-db.conf $STATE_DIRECTORY/exchange-db.conf
+            ${lib.getExe' cfg.package "taler-exchange-dbinit"} -c $STATE_DIRECTORY/exhcange-db.conf
+            ${lib.getExe' config.services.postgresql.package "psql"} -U taler-exchange-httpd -f ${dbScript}
+          '';
       }))
       # Database Initialisation
-      {
-        "taler-${talerComponent}-dbinit" = {
-          path = [ config.services.postgresql.package ];
-          documentation = [
-            "man:taler-${talerComponent}-dbinit(1)"
-            "info:taler-${talerComponent}"
-          ];
-          serviceConfig = {
-            Type = "oneshot";
-            DynamicUser = true;
-            User = dbName;
-            Restart = "on-failure";
-            RestartSec = "5s";
-          };
-          requires = [ "postgresql.service" ];
-          after = [ "postgresql.service" ];
-        };
-      }
+      # {
+      #   "taler-${talerComponent}-dbinit" = {
+      #     path = [ config.services.postgresql.package ];
+      #     documentation = [
+      #       "man:taler-${talerComponent}-dbinit(1)"
+      #       "info:taler-${talerComponent}"
+      #     ];
+      #     serviceConfig = {
+      #       Type = "oneshot";
+      #       DynamicUser = true;
+      #       User = dbName;
+      #     };
+      #     requires = [ "postgresql.service" ];
+      #     after = [ "postgresql.service" ];
+      #   };
+      # }
     ];
 
     users.groups.${groupName} = { };

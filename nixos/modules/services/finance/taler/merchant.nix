@@ -95,14 +95,14 @@ in
           lib.concatStrings (
             map (name: ''
               GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA merchant TO "taler-merchant-${name}";
-              GRANT USAGE ON SCHEMA merchant TO "taler-merchant-${name}";
+              GRANT USAGE ON ALL SEQUENCES IN SCHEMA merchant TO "taler-merchant-${name}";
             '') servicesDB
           )
         );
       in
       ''
         ${lib.getExe' cfg.package "taler-merchant-dbinit"}
-        psql -U taler-${talerComponent}-httpd -f ${dbScript}
+        ${lib.getExe' config.services.postgresql.package "psql"} -U taler-${talerComponent}-httpd -f ${dbScript} -c /etc/taler/conf.d/taler-merchant.conf
       '';
   };
 }

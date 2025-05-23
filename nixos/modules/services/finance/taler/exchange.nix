@@ -8,7 +8,9 @@
 
 let
   cfg = cfgTaler.exchange;
+  opt = options.services.taler.exchange;
   cfgTaler = config.services.taler;
+  settingsFormat = pkgs.formats.ini { };
 
   talerComponent = "exchange";
 
@@ -25,6 +27,20 @@ let
     "secmod-eddsa"
     "secmod-rsa"
   ];
+
+  dbName = "${cfg.settings.exchangedb-postgres.CONFIG}";
+
+  dbSettings = lib.mkOption {
+    type = lib.types.submodule {
+      inherit (options.services.taler.settings.type.nestedTypes) freeformType;
+      options = {
+        exchange = {
+          inherit (cfg.settings.exchange) DB;
+        };
+        inherit (cfg.settings) exchangedb-postgres;
+      };
+    };
+  };
 in
 
 {
@@ -33,6 +49,28 @@ in
   ];
 
   options.services.taler.exchange = {
+    settings-db = lib.mkOption {
+      type = lib.types.submodule {
+        inherit (options.services.taler.settings.type.nestedTypes) freeformType;
+        options = {
+          exchange = {
+            DB = lib.mkOption {
+              type = lib.types.enum [ "postgres" ];
+              default = "postgres";
+              description = "Plugin to use for the database.";
+            };
+          };
+          exchangedb-postgres = {
+            CONFIG = lib.mkOption {
+              type = lib.types.nonEmptyStr;
+              default = "postgres:///taler-exchange-httpd";
+              description = "Database connection URI.";
+            };
+          };
+        };
+      };
+      default = { };
+    };
     settings = lib.mkOption {
       description = ''
         Configuration options for the taler exchange config file.
@@ -131,24 +169,30 @@ in
       after = [ "taler-exchange-httpd.service" ];
     };
 
-    # Taken from https://docs.taler.net/taler-exchange-manual.html#exchange-database-setup
-    # TODO: Why does aggregator need DELETE?
-    systemd.services."taler-${talerComponent}-dbinit".script =
-      let
-        deletePerm = name: lib.optionalString (name == "aggregator") ",DELETE";
-        dbScript = pkgs.writers.writeText "taler-exchange-db-permissions.sql" (
-          lib.pipe servicesDB [
-            (map (name: ''
-              GRANT SELECT,INSERT,UPDATE${deletePerm name} ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-${name}";
-              GRANT USAGE ON SCHEMA exchange TO "taler-exchange-${name}";
-            ''))
-            lib.concatStrings
-          ]
-        );
-      in
-      ''
-        ${lib.getExe' cfg.package "taler-exchange-dbinit"}
-        psql -U taler-exchange-httpd -f ${dbScript}
-      '';
+    environment.etc."taler/exhcange-db.conf".source =
+      settingsFormat.generate "generated-taler-${talerComponent}-db.conf" cfg.settings-db;
+
+    # # Taken from https://docs.taler.net/taler-exchange-manual.html#exchange-database-setup
+    # # TODO: Why does aggregator need DELETE?
+    # systemd.services."taler-${talerComponent}-dbinit".script =
+    #   let
+    #     deletePerm = name: lib.optionalString (name == "aggregator") ",DELETE";
+    #     dbScript = pkgs.writers.writeText "taler-exchange-db-permissions.sql" (
+    #       lib.pipe servicesDB [
+    #         (map (name: ''
+    #           GRANT SELECT,INSERT,UPDATE${deletePerm name} ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-${name}";
+    #           GRANT USAGE ON ALL SEQUENCES IN SCHEMA exchange TO "taler-exchange-${name}";
+    #         ''))
+    #         lib.concatStrings
+    #       ]
+    #     );
+    #   in
+    #   ''
+    #     cat /etc/taler/exhcange-db.conf > /tmp/exchange-db.conf
+    #     rsync -a --chmod=u=rwX,go=rX /etc/taler/exhcange-db.conf $STATE_DIRECTORY/exchange-db.conf
+    #     chmod ugo+w /tmp/exchange-db.conf
+    #     ${lib.getExe' cfg.package "taler-exchange-dbinit"} -c /tmp/exhcange-db.conf
+    #     ${lib.getExe' config.services.postgresql.package "psql"} -U taler-exchange-httpd -f ${dbScript} -c /etc/taler/conf.d/taler-exchange.conf
+    #   '';
   };
 }

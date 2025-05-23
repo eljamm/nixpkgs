@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ pkgs, lib, ... }:
 let
   # Forward SSH and WebUI ports to host machine
   #
@@ -22,6 +22,14 @@ let
         };
       };
       security.pam.services.sshd.allowNullPassword = true;
+      virtualisation = {
+        graphics = false;
+
+        qemu.options = [
+          "-cpu host"
+          "-enable-kvm"
+        ];
+      };
       virtualisation.forwardPorts =
         (lib.optionals (sshPort != 0) [
           {
@@ -72,6 +80,10 @@ rec {
               };
             };
           };
+          environment.systemPackages = [
+            config.services.postgresql.package
+            pkgs.neovim
+          ];
         };
       };
 
