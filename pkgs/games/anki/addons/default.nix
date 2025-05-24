@@ -30,5 +30,7 @@ lib.makeScope newScope (
     reviewer-refocus-card = callPackage ./reviewer-refocus-card { };
 
     yomichan-forvo-server = callPackage ./yomichan-forvo-server { };
+
+    review-heatmap = callPackage ./review-heatmap { };
   }
 )
