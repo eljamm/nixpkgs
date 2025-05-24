@@ -36,5 +36,7 @@ lib.makeScope newScope (
     anki-ka-te-x-markdown-reworked = callPackage ./anki-ka-te-x-markdown-reworked { };
 
     minimize-to-tray = callPackage ./minimize-to-tray { };
+
+    flexible-grading = callPackage ./flexible-grading { };
   }
 )
