@@ -31,6 +31,8 @@ self: super: with self; {
   # keep-sorted start block=yes newline_separated=yes by_regex=["(?:inherit\\s+\\([^)]+\\)\\n?\\s*)?(.+)"]
   a2wsgi = callPackage ../development/python-modules/a2wsgi { };
 
+  aab = callPackage ../development/python-modules/aab { };
+
   aafigure = callPackage ../development/python-modules/aafigure { };
 
   aardwolf = callPackage ../development/python-modules/aardwolf { };
