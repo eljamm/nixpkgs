@@ -21,6 +21,8 @@ lib.makeScope newScope (
 
     local-audio-yomichan = callPackage ./local-audio-yomichan { };
 
+    ankimon = callPackage ./ankimon { };
+
     passfail2 = callPackage ./passfail2 { };
 
     recolor = callPackage ./recolor { };
