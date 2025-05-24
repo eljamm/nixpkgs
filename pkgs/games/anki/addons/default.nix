@@ -32,5 +32,7 @@ lib.makeScope newScope (
     yomichan-forvo-server = callPackage ./yomichan-forvo-server { };
 
     review-heatmap = callPackage ./review-heatmap { };
+
+    anki-ka-te-x-markdown-reworked = callPackage ./anki-ka-te-x-markdown-reworked { };
   }
 )
