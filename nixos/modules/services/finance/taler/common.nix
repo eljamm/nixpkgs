@@ -110,13 +110,11 @@ in
           ];
           serviceConfig = {
             Type = "oneshot";
-            DynamicUser = true;
             User = dbName;
             Group = groupName;
             RuntimeDirectory = "dbinit";
             StateDirectory = "dbinit";
             CacheDirectory = "dbinit";
-            LoadCredential = "taler.conf:${config.environment.etc."taler/taler.conf".source}";
             ReadWritePaths = [ runtimeDir ];
           };
           requires = [ "postgresql.service" ];
@@ -125,6 +123,12 @@ in
       }
     ];
 
+    users.users.${dbName} = {
+      home = runtimeDir;
+      createHome = false;
+      isSystemUser = true;
+      group = groupName;
+    };
     users.groups.${groupName} = { };
     systemd.tmpfiles.settings = {
       "10-taler-${talerComponent}" = {

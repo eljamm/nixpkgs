@@ -180,24 +180,27 @@ in
     environment.etc."taler/exhcange-db.conf".source =
       settingsFormat.generate "generated-taler-${talerComponent}-db.conf" cfg.settings-db;
 
-    # Taken from https://docs.taler.net/taler-exchange-manual.html#exchange-database-setup
-    # TODO: Why does aggregator need DELETE?
-    systemd.services."taler-${talerComponent}-dbinit".script =
-      let
-        deletePerm = name: lib.optionalString (name == "aggregator") ",DELETE";
-        dbScript = pkgs.writers.writeText "taler-exchange-db-permissions.sql" (
-          lib.pipe servicesDB [
-            (map (name: ''
-              GRANT SELECT,INSERT,UPDATE${deletePerm name} ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-${name}";
-              GRANT USAGE ON ALL SEQUENCES IN SCHEMA exchange TO "taler-exchange-${name}";
-            ''))
-            lib.concatStrings
-          ]
-        );
-      in
-      ''
-        ${lib.getExe' cfg.package "taler-exchange-dbinit"} -c $CREDENTIALS_DIRECTORY/exchange-db.conf
-        ${lib.getExe' config.services.postgresql.package "psql"} -U taler-exchange-httpd -f ${dbScript} -c $CREDENTIALS_DIRECTORY/exchange-db.conf
-      '';
+    systemd.services."taler-${talerComponent}-dbinit" = {
+      # Taken from https://docs.taler.net/taler-exchange-manual.html#exchange-database-setup
+      # TODO: Why does aggregator need DELETE?
+      script =
+        let
+          deletePerm = name: lib.optionalString (name == "aggregator") ",DELETE";
+          dbScript = pkgs.writers.writeText "taler-exchange-db-permissions.sql" (
+            lib.pipe servicesDB [
+              (map (name: ''
+                GRANT SELECT,INSERT,UPDATE${deletePerm name} ON ALL TABLES IN SCHEMA exchange TO "taler-exchange-${name}";
+                GRANT USAGE ON ALL SEQUENCES IN SCHEMA exchange TO "taler-exchange-${name}";
+              ''))
+              lib.concatStrings
+            ]
+          );
+        in
+        ''
+          ${lib.getExe' cfg.package "taler-exchange-dbinit"} -c $CREDENTIALS_DIRECTORY/taler.conf
+          ${lib.getExe' config.services.postgresql.package "psql"} -U taler-exchange-httpd -f ${dbScript} -c $CREDENTIALS_DIRECTORY/taler.conf
+        '';
+      serviceConfig.LoadCredential = "taler.conf:${settingsFormat.generate "generated-taler-${talerComponent}-db.conf" cfg.settings-db}";
+    };
   };
 }
