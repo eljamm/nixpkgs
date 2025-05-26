@@ -13,3 +13,9 @@ psql -U taler-exchange-httpd -f /nix/store/n3d87gal0zk640r01wnsl0j6ns9m3al8-tale
 
 cp /etc/taler/conf.d/taler-exchange.conf /exchange.conf
 ```
+
+```
+systemd-run -p DynamicUser=yes -p User=taler-merchant-httpd --wait --pty taler-merchant-dbinit -c /etc/taler/taler.conf -L debug
+
+cat /nix/store/vgr9z87gkban3dqbnd7ir02057kyg6p6-generated-taler-merchant.conf > /tmp/merchant.conf
+```
