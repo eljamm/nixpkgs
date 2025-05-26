@@ -73,13 +73,17 @@ stdenv.mkDerivation (finalAttrs: {
     "ac_cv_path__libcurl_config=${lib.getDev curl}/bin/curl-config"
   ];
 
-  # NOTE: The executables that need database access fail to detect the
-  # postgresql library in `$out/lib/taler`, so we need to wrap them.
   postInstall = ''
+    # NOTE: The executables that need database access fail to detect the
+    # postgresql library in `$out/lib/taler`, so we need to wrap them.
     for exec in dbinit httpd webhook wirewatch depositcheck exchangekeyupdate; do
       wrapProgram $out/bin/taler-merchant-$exec \
         --prefix LD_LIBRARY_PATH : "$out/lib/taler"
     done
+
+    # dbinit expect `versioning.sql` under `share/taler/sql`
+    mkdir -p $out/share/taler/sql
+    ln -s $out/share/taler-merchant/sql $out/share/taler/sql/merchant
   '';
 
   enableParallelBuilding = true;
