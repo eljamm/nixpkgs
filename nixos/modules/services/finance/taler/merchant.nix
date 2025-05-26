@@ -17,7 +17,6 @@ let
     "webhook"
     "wirewatch"
     "depositcheck"
-    "exchange"
   ];
 in
 {
@@ -88,21 +87,28 @@ in
       path = [ cfg.package ];
     };
 
-    systemd.services."taler-${talerComponent}-dbinit".script =
-      let
-        # NOTE: not documented, but is necessary
-        dbScript = pkgs.writers.writeText "taler-merchant-db-permissions.sql" (
-          lib.concatStrings (
-            map (name: ''
-              GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA merchant TO "taler-merchant-${name}";
-              GRANT USAGE ON ALL SEQUENCES IN SCHEMA merchant TO "taler-merchant-${name}";
-            '') servicesDB
-          )
-        );
-      in
-      ''
-        ${lib.getExe' cfg.package "taler-merchant-dbinit"}
-        ${lib.getExe' config.services.postgresql.package "psql"} -U taler-${talerComponent}-httpd -f ${dbScript} -c /etc/taler/conf.d/taler-merchant.conf
-      '';
+    systemd.services."taler-${talerComponent}-dbinit" = {
+      script =
+        let
+          # NOTE: not documented, but is necessary
+          dbScript = pkgs.writers.writeText "taler-merchant-db-permissions.sql" (
+            lib.concatStrings (
+              map (name: ''
+                GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA merchant TO "taler-merchant-${name}";
+                GRANT USAGE ON ALL SEQUENCES IN SCHEMA merchant TO "taler-merchant-${name}";
+              '') servicesDB
+            )
+          );
+        in
+        ''
+          ${lib.getExe' cfg.package "taler-merchant-dbinit"} -c $CREDENTIALS_DIRECTORY/taler.conf
+          ${lib.getExe' config.services.postgresql.package "psql"} -U taler-${talerComponent}-httpd -f ${dbScript}
+        '';
+      serviceConfig.LoadCredential =
+        let
+          configFile = config.environment.etc."taler/taler.conf".source;
+        in
+        "taler.conf:${configFile}";
+    };
   };
 }
