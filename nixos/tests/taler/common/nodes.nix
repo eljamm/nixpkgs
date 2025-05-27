@@ -68,6 +68,8 @@ rec {
               enable = true;
               debug = true;
               openFirewall = true;
+              # https://docs.taler.net/taler-exchange-manual.html#coins-denomination-keys
+              # NOTE: use `taler-harness`, not `taler-wallet-cli`
               denominationConfig = lib.readFile ../conf/taler-denominations.conf;
               settings = {
                 exchange = {
@@ -75,6 +77,7 @@ rec {
                   MASTER_PUBLIC_KEY = "2TQSTPFZBC2MC4E52NHPA050YXYG02VC3AB50QESM6JX1QJEYVQ0";
                   BASE_URL = "http://exchange:8081/";
                   TERMS_DIR = "${../conf/terms}";
+                  SECM_TOFU_FILE = "\${STATE_DIRECTORY}/secm_tofus.pub";
                 };
                 exchange-offline = {
                   MASTER_PRIV_FILE = "${../conf/private.key}";
