@@ -111,6 +111,10 @@ in
               default = 8081;
               description = "Port on which the HTTP server listens.";
             };
+            TERMS_DIR = lib.mkOption {
+              type = lib.types.str;
+              description = "Directory where the terms of service of the exchange operator can be found.";
+            };
           };
           exchangedb-postgres = {
             CONFIG = lib.mkOption {
@@ -202,5 +206,7 @@ in
         '';
       serviceConfig.LoadCredential = "taler.conf:${settingsFormat.generate "generated-taler-${talerComponent}-db.conf" cfg.settings-db}";
     };
+
+    environment.systemPackages = [ cfg.package.terms ];
   };
 }

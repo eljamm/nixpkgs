@@ -74,6 +74,7 @@ rec {
                   CURRENCY = "KUDOS";
                   MASTER_PUBLIC_KEY = "2TQSTPFZBC2MC4E52NHPA050YXYG02VC3AB50QESM6JX1QJEYVQ0";
                   BASE_URL = "http://exchange:8081/";
+                  TERMS_DIR = "${../conf/terms}";
                 };
                 exchange-offline = {
                   MASTER_PRIV_FILE = "${../conf/private.key}";
