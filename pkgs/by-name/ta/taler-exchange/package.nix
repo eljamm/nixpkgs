@@ -19,6 +19,14 @@
   gettext,
   texinfo,
   libtool,
+
+  makeWrapper,
+  ghostscript_headless,
+  gnumake,
+  groff,
+  pandoc,
+  sphinx,
+  which,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -38,10 +46,11 @@ stdenv.mkDerivation (finalAttrs: {
     autoreconfHook
     recutils # recfix
     pkg-config
-    python3.pkgs.jinja2
+    (python3.withPackages (p: with p; [ jinja2 ]))
     texinfo # makeinfo
     # jq is necessary for some tests and is checked by configure script
     jq
+    makeWrapper
   ];
 
   buildInputs = [
@@ -96,6 +105,61 @@ stdenv.mkDerivation (finalAttrs: {
 
   configureFlags = [
     "ac_cv_path__libcurl_config=${lib.getDev curl}/bin/curl-config"
+  ];
+
+  postPatch = ''
+    # Can only `return` from a function or sourced script
+    for file in taler-exchange-kyc-oauth2-{challenger,nda}.sh; do
+      substituteInPlace src/kyclogic/$file \
+        --replace-fail "return 1" "exit 1"
+    done
+  '';
+
+  postFixup = ''
+    # Wrap scripts with necessary runtime dependencies
+    for file in \
+      taler-exchange-helper-measure-test-{form,oauth} \
+      taler-exchange-helper-converter-oauth2-test-full_name \
+      taler-exchange-kyc-aml-pep-trigger.sh \
+      taler-exchange-kyc-kycaid-converter.sh \
+      taler-exchange-kyc-oauth2-{challenger,nda,test-converter}.sh \
+      taler-exchange-kyc-persona-converter.sh \
+      ; do
+        wrapProgram $out/bin/$file \
+          --prefix PATH : ${
+            lib.makeBinPath [
+              gnunet
+              jq
+              wget
+              which
+            ]
+          }
+    done
+    # Put scripts with big dependency closures in separate outputs
+    mkdir -p $terms/bin
+    mv $out/bin/taler-terms-generator $terms/bin/taler-terms-generator
+    wrapProgram $terms/bin/taler-terms-generator \
+      --prefix PATH : ${
+        lib.makeBinPath [
+          ghostscript_headless
+          gnumake
+          groff
+          pandoc
+          sphinx
+          which
+          (python3.withPackages (p: with p; [ sphinx-markdown-builder ]))
+          (placeholder "out")
+        ]
+      }
+    # This script imperatively sets up Taler components for testing, which not
+    # only needs a considerable amount of dependencies, but is also better
+    # handled by Taler's NixOS module.
+    rm $out/bin/taler-unified-setup.sh
+  '';
+
+  outputs = [
+    "out"
+    "terms"
   ];
 
   enableParallelBuilding = true;
