@@ -80,9 +80,13 @@ stdenv.mkDerivation (finalAttrs: {
       wrapProgram $out/bin/taler-merchant-$exec \
         --prefix LD_LIBRARY_PATH : "$out/lib/taler"
     done
+  '';
 
-    # dbinit expect `versioning.sql` under `share/taler/sql`
+  postFixup = ''
+    # - taler-merchant-dbinit expects `versioning.sql` under `share/taler/sql`
+    # - taler-merchant-httpd expects `share/taler/merchant/templates`
     mkdir -p $out/share/taler/sql
+    ln -s $out/share/taler-merchant $out/share/taler/merchant
     ln -s $out/share/taler-merchant/sql $out/share/taler/sql/merchant
   '';
 
