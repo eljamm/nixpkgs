@@ -95,6 +95,10 @@ stdenv.mkDerivation (finalAttrs: {
     done
   '';
 
+  postFixup = ''
+    patchShebangs --build $out/bin/taler-helper-sqlite3
+  '';
+
   env.ESBUILD_BINARY_PATH = lib.getExe esbuild';
 
   meta = {
