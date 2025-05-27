@@ -200,7 +200,7 @@ import ../../make-test-python.nix (
                 ])
 
             # Process transactions
-            # wallet_cli("run-until-done")
+            wallet_cli("run-until-done")
 
             verify_balance(balanceWanted)
 

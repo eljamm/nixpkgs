@@ -162,11 +162,6 @@ in
       (pkgs.writers.writeText "exchange-denominations.conf" cfg.denominationConfig)
     ];
 
-    systemd.services.taler-exchange-wirewatch = {
-      requires = [ "taler-exchange-httpd.service" ];
-      after = [ "taler-exchange-httpd.service" ];
-    };
-
     systemd.services."taler-${talerComponent}-dbinit" = {
       # Taken from https://docs.taler.net/taler-exchange-manual.html#exchange-database-setup
       # TODO: Why does aggregator need DELETE?
@@ -188,6 +183,24 @@ in
           ${lib.getExe' cfg.package "taler-auditor-dbinit"} -c ${configFile}
           ${lib.getExe' config.services.postgresql.package "psql"} -U taler-exchange-httpd -f ${dbScript}
         '';
+    };
+
+    systemd.services."taler-exchange-httpd" = {
+      requires = [
+        "taler-exchange-secmod-cs.service"
+        "taler-exchange-secmod-eddsa.service"
+        "taler-exchange-secmod-rsa.service"
+      ];
+      after = [
+        "taler-exchange-secmod-cs.service"
+        "taler-exchange-secmod-eddsa.service"
+        "taler-exchange-secmod-rsa.service"
+      ];
+    };
+
+    systemd.services.taler-exchange-wirewatch = {
+      requires = [ "taler-exchange-httpd.service" ];
+      after = [ "taler-exchange-httpd.service" ];
     };
 
     environment.systemPackages = [ cfg.package.terms ];
