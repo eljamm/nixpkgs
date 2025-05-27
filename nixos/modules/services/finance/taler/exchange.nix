@@ -202,9 +202,10 @@ in
         in
         ''
           ${lib.getExe' cfg.package "taler-exchange-dbinit"} -c $CREDENTIALS_DIRECTORY/taler.conf
+          ${lib.getExe' cfg.package "taler-auditor-dbinit"} -c $CREDENTIALS_DIRECTORY/taler.conf
           ${lib.getExe' config.services.postgresql.package "psql"} -U taler-exchange-httpd -f ${dbScript}
         '';
-      serviceConfig.LoadCredential = "taler.conf:${settingsFormat.generate "generated-taler-${talerComponent}-db.conf" cfg.settings-db}";
+      serviceConfig.LoadCredential = "taler.conf:/etc/taler/taler.conf";
     };
 
     environment.systemPackages = [ cfg.package.terms ];

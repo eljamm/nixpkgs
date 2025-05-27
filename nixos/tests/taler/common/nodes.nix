@@ -82,6 +82,7 @@ rec {
                 exchange-offline = {
                   MASTER_PRIV_FILE = "${../conf/private.key}";
                 };
+                auditordb-postgres.CONFIG = "postgres:///taler-exchange-httpd";
               };
             };
           };
