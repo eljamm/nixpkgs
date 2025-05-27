@@ -150,6 +150,19 @@ import ../../make-test-python.nix (
 
         client.succeed("curl -s http://exchange:8081/")
 
+        # Create access token
+        # https://docs.taler.net/core/api-corebank.html#authentication
+        accessToken = json.loads(
+            succeed(client, [
+                "curl -X POST",
+                "-u ${TUSER}:${TPASS}",
+                "-H 'Content-Type: application/json'",
+                """
+                --data '{ "scope": "readwrite" }'
+                """,
+                "-sSfL 'http://bank:8082/accounts/${TUSER}/token'"
+            ])
+        )["access_token"]
 
         # Make a withdrawal from the CLI wallet
         with subtest("Make a withdrawal from the CLI wallet"):
@@ -164,7 +177,7 @@ import ../../make-test-python.nix (
             withdrawal = json.loads(
                 succeed(client, [
                     "curl -X POST",
-                    "-u ${TUSER}:${TPASS}",
+                    f"-H 'Authorization: Bearer {accessToken}'",
                     "-H 'Content-Type: application/json'",
                     f"""--data '{{"amount": "{balanceWanted}"}}'""", # double brackets escapes them
                     "-sSfL 'http://bank:8082/accounts/${TUSER}/withdrawals'"
@@ -176,7 +189,7 @@ import ../../make-test-python.nix (
                 wallet_cli(f"withdraw accept-uri {withdrawal["taler_withdraw_uri"]} --exchange http://exchange:8081/")
                 succeed(client, [
                     "curl -X POST",
-                    "-u ${TUSER}:${TPASS}",
+                    f"-H 'Authorization: Bearer {accessToken}'",
                     "-H 'Content-Type: application/json'",
                     f"-sSfL 'http://bank:8082/accounts/${TUSER}/withdrawals/{withdrawal["withdrawal_id"]}/confirm'"
                 ])
