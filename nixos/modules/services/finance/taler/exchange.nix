@@ -8,9 +8,7 @@
 
 let
   cfg = cfgTaler.exchange;
-  opt = options.services.taler.exchange;
   cfgTaler = config.services.taler;
-  settingsFormat = pkgs.formats.ini { };
 
   talerComponent = "exchange";
 
@@ -28,19 +26,7 @@ let
     "secmod-rsa"
   ];
 
-  dbName = "${cfg.settings.exchangedb-postgres.CONFIG}";
-
-  dbSettings = lib.mkOption {
-    type = lib.types.submodule {
-      inherit (options.services.taler.settings.type.nestedTypes) freeformType;
-      options = {
-        exchange = {
-          inherit (cfg.settings.exchange) DB;
-        };
-        inherit (cfg.settings) exchangedb-postgres;
-      };
-    };
-  };
+  configFile = config.environment.etc."taler/taler.conf".source;
 in
 
 {
@@ -181,9 +167,6 @@ in
       after = [ "taler-exchange-httpd.service" ];
     };
 
-    environment.etc."taler/exhcange-db.conf".source =
-      settingsFormat.generate "generated-taler-${talerComponent}-db.conf" cfg.settings-db;
-
     systemd.services."taler-${talerComponent}-dbinit" = {
       # Taken from https://docs.taler.net/taler-exchange-manual.html#exchange-database-setup
       # TODO: Why does aggregator need DELETE?
@@ -201,11 +184,10 @@ in
           );
         in
         ''
-          ${lib.getExe' cfg.package "taler-exchange-dbinit"} -c $CREDENTIALS_DIRECTORY/taler.conf
-          ${lib.getExe' cfg.package "taler-auditor-dbinit"} -c $CREDENTIALS_DIRECTORY/taler.conf
+          ${lib.getExe' cfg.package "taler-exchange-dbinit"} -c ${configFile}
+          ${lib.getExe' cfg.package "taler-auditor-dbinit"} -c ${configFile}
           ${lib.getExe' config.services.postgresql.package "psql"} -U taler-exchange-httpd -f ${dbScript}
         '';
-      serviceConfig.LoadCredential = "taler.conf:/etc/taler/taler.conf";
     };
 
     environment.systemPackages = [ cfg.package.terms ];

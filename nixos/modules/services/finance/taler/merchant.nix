@@ -18,6 +18,8 @@ let
     "wirewatch"
     "depositcheck"
   ];
+
+  configFile = config.environment.etc."taler/taler.conf".source;
 in
 {
   imports = [
@@ -101,14 +103,9 @@ in
           );
         in
         ''
-          ${lib.getExe' cfg.package "taler-merchant-dbinit"} -c $CREDENTIALS_DIRECTORY/taler.conf
+          ${lib.getExe' cfg.package "taler-merchant-dbinit"} -c ${configFile}
           ${lib.getExe' config.services.postgresql.package "psql"} -U taler-${talerComponent}-httpd -f ${dbScript}
         '';
-      serviceConfig.LoadCredential =
-        let
-          configFile = config.environment.etc."taler/taler.conf".source;
-        in
-        "taler.conf:${configFile}";
     };
   };
 }
