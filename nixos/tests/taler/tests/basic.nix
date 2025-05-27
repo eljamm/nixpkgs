@@ -186,16 +186,21 @@ import ../../make-test-python.nix (
 
             # Accept & confirm withdrawal
             with subtest("Accept & confirm withdrawal"):
-                wallet_cli(f"withdraw accept-uri {withdrawal["taler_withdraw_uri"]} --exchange http://exchange:8081/")
+                wallet_cli(f"withdraw accept-uri {withdrawal["taler_withdraw_uri"]} --exchange 'http://exchange:8081/'")
+                client.sleep(10) # needs some time to process
+                wallet_cli(f"withdraw accept-uri {withdrawal["taler_withdraw_uri"]} --exchange 'http://exchange:8081/'")
+                client.sleep(10) # needs some time to process
+
                 succeed(client, [
                     "curl -X POST",
                     f"-H 'Authorization: Bearer {accessToken}'",
                     "-H 'Content-Type: application/json'",
+                    f"""--data '{{"amount": "{balanceWanted}"}}'""", # double brackets escapes them
                     f"-sSfL 'http://bank:8082/accounts/${TUSER}/withdrawals/{withdrawal["withdrawal_id"]}/confirm'"
                 ])
 
             # Process transactions
-            wallet_cli("run-until-done")
+            # wallet_cli("run-until-done")
 
             verify_balance(balanceWanted)
 

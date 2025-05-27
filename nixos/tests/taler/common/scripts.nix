@@ -65,6 +65,7 @@ in
           return client.succeed(
               "taler-wallet-cli "
               "--no-throttle "    # don't do any request throttling
+              "--skip-defaults "
               + command
           )
 
