@@ -78,6 +78,7 @@ rec {
                   BASE_URL = "http://exchange:8081/";
                   TERMS_DIR = "${../conf/terms}";
                   SECM_TOFU_FILE = "\${STATE_DIRECTORY}/secm_tofus.pub";
+                  ENABLE_KYC = "NO";
                 };
                 exchange-offline = {
                   MASTER_PRIV_FILE = "${../conf/private.key}";
