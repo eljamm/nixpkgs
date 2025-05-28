@@ -211,6 +211,12 @@ rec {
                 MASTER_KEY = "2TQSTPFZBC2MC4E52NHPA050YXYG02VC3AB50QESM6JX1QJEYVQ0";
                 inherit CURRENCY;
               };
+              # TODO: probably not needed, just testing
+              settings.merchant-exchange-taler = {
+                EXCHANGE_BASE_URL = "https://exchange.demo.taler.net/";
+                MASTER_KEY = "F80MFRG8HVH6R9CQ47KRFQSJP3T6DBJ4K1D9B703RJY3Z39TBMJ0";
+                CURRENCY = "KUDOS";
+              };
             };
           };
         };
