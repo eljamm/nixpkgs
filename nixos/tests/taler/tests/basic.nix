@@ -58,7 +58,7 @@ import ../../make-test-python.nix (
         ${commonScripts}
 
         def create_exchange_user(token: str):
-            return f"""
+            template = f"""
             [exchange-account-test]
             PAYTO_URI = payto://x-taler-bank/bank:8082/exchange?receiver-name=Exchange
             ENABLE_DEBIT = YES
@@ -67,8 +67,9 @@ import ../../make-test-python.nix (
             [exchange-accountcredentials-test]
             WIRE_GATEWAY_URL = http://bank:8082/accounts/exchange/taler-wire-gateway/
             WIRE_GATEWAY_AUTH_METHOD = BEARER
-            TOKEN = "secret-token:{token}"
+            TOKEN = "{token}"
             """
+            return "\n".join([line.strip() for line in template.splitlines()])
 
         # NOTE: start components up individually so they don't conflict before their setup is done
         bank.start()
@@ -107,7 +108,7 @@ import ../../make-test-python.nix (
 
         exchange.wait_for_open_port(8081)
 
-        exchange.succeed(f"echo {create_exchange_user(accessTokenExchange)} > /etc/taler/secrets/exchange-account.secret.conf")
+        exchange.succeed(f'echo "{create_exchange_user(accessTokenExchange))}" > /etc/taler/secrets/exchange-account.secret.conf')
 
         with subtest("Set up exchange"):
             # Set up exchange keys
