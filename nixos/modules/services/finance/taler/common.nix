@@ -62,6 +62,8 @@ in
           StateDirectory = name;
           CacheDirectory = name;
           ReadWritePaths = [ runtimeDir ];
+          Restart = "always";
+          RestartSec = "10s";
         };
         requires = [ "taler-${talerComponent}-dbinit.service" ];
         after = [ "taler-${talerComponent}-dbinit.service" ];
@@ -84,6 +86,8 @@ in
             DynamicUser = true;
             User = dbName;
             Group = groupName;
+            Restart = "on-failure";
+            RestartSec = "5s";
           };
           requires = [ "postgresql.service" ];
           after = [ "postgresql.service" ];
