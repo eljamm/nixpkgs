@@ -82,6 +82,12 @@ rec {
                 exchange-offline = {
                   MASTER_PRIV_FILE = "${../conf/private.key}";
                 };
+                # https://docs.taler.net/taler-auditor-manual.html#keys
+                auditor = {
+                  BASE_URL = "http://exchange:8081/";
+                  PUBLIC_KEY = "FMVQ2H8HRJGJSVV8WR1P5GWHP2V6T9FP736J9XDHFGWKXDN8NFQ0";
+                  AUDITOR_PRIV_FILE = "${../conf/auditor.priv}";
+                };
                 auditordb-postgres.CONFIG = "postgres:///taler-exchange-httpd";
               };
             };

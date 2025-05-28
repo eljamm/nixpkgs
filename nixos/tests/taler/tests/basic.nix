@@ -88,6 +88,8 @@ import ../../make-test-python.nix (
             # Enable exchange wire account
             exchange.succeed('taler-exchange-offline upload < ${exchangeAccount}')
 
+            # exchange.wait_until_succeeds('taler-auditor-offline -c "${configFile}" download sign upload')
+
 
         # Verify that exchange keys exist
         bank.succeed("curl -s http://exchange:8081/keys")

@@ -198,6 +198,37 @@ in
       ];
     };
 
+    systemd.services."taler-auditor-httpd" =
+      let
+        dbName = "taler-${talerComponent}-httpd";
+        groupName = "taler-${talerComponent}-services";
+        name = "taler-auditor-httpd";
+        inherit (cfgTaler) runtimeDir;
+      in
+      {
+        serviceConfig = {
+          DynamicUser = true;
+          User = dbName;
+          Group = groupName;
+          ExecStart = toString [
+            (lib.getExe' cfg.package name)
+            "-c ${configFile}"
+            (lib.optionalString cfg.debug " -L debug")
+          ];
+          RuntimeDirectory = name;
+          StateDirectory = name;
+          CacheDirectory = name;
+          ReadWritePaths = [ runtimeDir ];
+        };
+        requires = [ "taler-${talerComponent}-dbinit.service" ];
+        after = [ "taler-${talerComponent}-dbinit.service" ];
+        wantedBy = [ "multi-user.target" ]; # TODO slice?
+        documentation = [
+          "man:taler-${talerComponent}-${name}(1)"
+          "info:taler-${talerComponent}"
+        ];
+      };
+
     systemd.services.taler-exchange-wirewatch = {
       requires = [ "taler-exchange-httpd.service" ];
       after = [ "taler-exchange-httpd.service" ];
