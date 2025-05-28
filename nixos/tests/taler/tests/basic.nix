@@ -57,6 +57,18 @@ import ../../make-test-python.nix (
         # import common scripts
         ${commonScripts}
 
+        def create_exchange_user(token: str):
+            return f"""
+            [exchange-account-test]
+            PAYTO_URI = payto://x-taler-bank/bank:8082/exchange?receiver-name=Exchange
+            ENABLE_DEBIT = YES
+            ENABLE_CREDIT = YES
+
+            [exchange-accountcredentials-test]
+            WIRE_GATEWAY_URL = http://bank:8082/accounts/exchange/taler-wire-gateway/
+            WIRE_GATEWAY_AUTH_METHOD = BEARER
+            TOKEN = "secret-token:{token}"
+            """
 
         # NOTE: start components up individually so they don't conflict before their setup is done
         bank.start()
@@ -75,10 +87,27 @@ import ../../make-test-python.nix (
                 register_bank_account("testUser", "testUser", "User")
                 register_bank_account("merchant", "merchant", "Merchant")
 
+        # Create access token for exchange
+        # https://docs.taler.net/core/api-corebank.html#authentication
+        accessTokenExchange = json.loads(
+            succeed(client, [
+                "curl -X POST",
+                "-u exchange:exchange",
+                "-H 'Content-Type: application/json'",
+                """
+                --data '{ "scope": "readwrite" }'
+                """,
+                "-sSfL 'http://bank:8082/accounts/exchange/token'"
+            ])
+        )["access_token"]
 
         exchange.start()
+        exchange.succeed("mkdir -p /etc/taler/secrets/")
+        exchange.succeed("touch /etc/taler/secrets/exchange-account.secret.conf")
+
         exchange.wait_for_open_port(8081)
 
+        exchange.succeed(f"echo {create_exchange_user(accessTokenExchange)} > /etc/taler/secrets/exchange-account.secret.conf")
 
         with subtest("Set up exchange"):
             # Set up exchange keys

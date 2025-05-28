@@ -63,7 +63,10 @@ rec {
             settings = {
               taler.CURRENCY = CURRENCY;
             };
-            includes = [ ../conf/taler-accounts.conf ];
+            # includes = [ ../conf/taler-accounts.conf ];
+            includes = [
+              "/etc/taler/secrets/exchange-account.secret.conf"
+            ];
             exchange = {
               enable = true;
               debug = true;
