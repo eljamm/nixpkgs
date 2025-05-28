@@ -233,7 +233,8 @@ import ../../make-test-python.nix (
 
 
         with subtest("Pay for an order"):
-            balanceWanted = "${CURRENCY}:9" # after paying
+            # after paying (1 for the order and 0.1 as fee)
+            balanceWanted = "${CURRENCY}:8.9"
 
             # Create an order to be paid
             response = json.loads(
