@@ -17,6 +17,7 @@ let
     "webhook"
     "wirewatch"
     "depositcheck"
+    "exchangekeyupdate"
   ];
 
   configFile = config.environment.etc."taler/taler.conf".source;
