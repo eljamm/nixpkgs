@@ -54,3 +54,12 @@ systemd-run -p DynamicUser=yes -p User=taler-exchange-wirewatch --wait --pty bas
 ```
 
 taler-exchange-wire-gateway-client -c /tmp/taler-accounts.conf --section exchange-accountcredentials-test --debit-history
+
+```
+curl -X POST -u default:default -H 'Content-Type: application/json' --data '{"scope": "readwrite"}' -sSfL 'http://merchant:8083/instances/default/private/token'
+
+curl -X POST -H 'Authorization: Bearer secret-token:super_secret' -H 'Content-Type: application/json'             --data '{              "order": { "amount": "KUDOS:1", "summary": "Test Order" },              "inventory_products": [{ "product_id": "1", "quantity": 1 }]            }'             -sSfL 'http://merchant:8083/instances/default/private/orders'
+```
+
+systemd-run -p DynamicUser=yes -p User=taler-merchant-httpd --wait --pty bash
+taler-merchant-exchangekeyupdate -c /nix/store/skz6zj9lsk4wxyypmi80wy9ja4va56vc-taler.conf
