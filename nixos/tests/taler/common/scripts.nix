@@ -85,14 +85,14 @@ in
               client.succeed(f"echo Withdraw successfully made. New balance: {balanceWanted}")
 
 
-      def verify_conversion(regionalWanted: str):
+      def verify_conversion(regionalWanted: str, accessToken: str):
           """Compare converted Libeufin Nexus funds with expected regional currency"""
           # Get transaction details
           response = json.loads(
               succeed(bank, [
                   "curl -sSfL",
+                  f"-H 'Authorization: Bearer {accessToken}'",
                   # TODO: get exchange from config?
-                  "-u exchange:exchange",
                   "http://bank:8082/accounts/exchange/transactions"
               ])
           )

@@ -277,14 +277,28 @@ import ../../make-test-python.nix (
             with subtest("Libeufin Nexus currency conversion"):
                 regionalWanted = "20"
 
+                # Create access token
+                # https://docs.taler.net/core/api-corebank.html#authentication
+                accessTokenAdmin = json.loads(
+                    succeed(client, [
+                        "curl -X POST",
+                        "-u ${AUSER}:${APASS}",
+                        "-H 'Content-Type: application/json'",
+                        """
+                        --data '{ "scope": "readwrite" }'
+                        """,
+                        "-sSfL 'http://bank:8082/accounts/${AUSER}/token'"
+                    ])
+                )["access_token"]
+
                 # Setup Nexus ebics keys
                 systemd_run(bank, "libeufin-nexus ebics-setup -L debug -c /etc/libeufin/libeufin.conf", "libeufin-nexus")
 
                 # Set currency conversion rates (1:1)
                 succeed(bank, [
                     "curl -X POST",
+                    f"-H 'Authorization: Bearer {accessTokenAdmin}'",
                     "-H 'Content-Type: application/json'",
-                    "-u ${AUSER}:${APASS}",
                     """
                     --data '{
                       "cashin_ratio": "1",
@@ -310,7 +324,7 @@ import ../../make-test-python.nix (
                 systemd_run(bank, f"""libeufin-nexus testing fake-incoming -c ${bankConfig} --amount="${FIAT_CURRENCY}:{regionalWanted}" --subject="{reservePub}" "payto://iban/CH4740123RW4167362694" """, "libeufin-nexus")
                 wallet_cli("run-until-done")
 
-                verify_conversion(regionalWanted)
+                verify_conversion(regionalWanted, accessTokenExchange)
       '';
   }
 )
