@@ -63,8 +63,10 @@ rec {
             settings = {
               taler.CURRENCY = CURRENCY;
             };
-            # includes = [ ../conf/taler-accounts.conf ];
             includes = [
+              # For wirewatch
+              ../conf/taler-accounts.conf
+              # Requires a token from the bank, so it needs to be set at runtime
               "/etc/taler/secrets/exchange-account.secret.conf"
             ];
             exchange = {
