@@ -131,7 +131,7 @@ rec {
               libeufin-bank = {
                 WIRE_TYPE = "x-taler-bank";
                 # WIRE_TYPE = "iban";
-                X_TALER_BANK_PAYTO_HOSTNAME = "http://bank:8082/";
+                X_TALER_BANK_PAYTO_HOSTNAME = "bank:8082";
                 # IBAN_PAYTO_BIC = "SANDBOXX";
                 BASE_URL = "http://bank:8082/";
 
