@@ -16,12 +16,12 @@ let
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "libeufin";
-  version = "1.0.0";
+  version = "1.0.2";
 
   src = fetchgit {
     url = "https://git.taler.net/libeufin.git/";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-/v9EQdLJmDKM32/Xz91Jhol+sdBwFuSc0Oju37M1f7k=";
+    hash = "sha256-ZjZo0oCsrnc413OY7ElU95Vto9Smp6fuPI3RzJzC3Zk=";
     fetchSubmodules = true;
     leaveDotGit = true; # required for correct submodule fetching
     # Save the HEAD short commit hash in a file so it can be retrieved later for versioning.
