@@ -4,28 +4,28 @@
   rustPlatform,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "gdscript-formatter";
   version = "0.9.1";
 
   src = fetchFromGitHub {
-    owner = "GDQuest";
+    owner = "eljamm";
     repo = "GDScript-formatter";
-    tag = version;
-    hash = "sha256-2xbsQUt5jfWEvhOix+WEK9rP7tb2DZ0BX35YqPpdyuc=";
+    rev = "b394f9a47a85cd68051e6a1360f6ce0b97e9ed8d";
+    hash = "sha256-5nKXs1aY54pYtWAYYzlhxE+5rGxMv02/Cxm2NeioVTs=";
   };
 
-  cargoHash = "sha256-RqNgPEP/phhobwAl8a3sm5iaiwdTpwdJ8NtnzJPd6uQ=";
+  cargoHash = "sha256-MGN/l12UOOkMYhowDM3hQfqouEmDCzUosNwKtvTIzx8=";
 
   cargoBuildFlags = [
     "--bin=gdscript-formatter"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "A fast code formatter for GDScript and Godot 4, written in Rust";
     homepage = "https://github.com/GDQuest/GDScript-formatter";
-    license = licenses.mit;
+    license = lib.licenses.mit;
     mainProgram = "gdscript-formatter";
-    maintainers = with maintainers; [ squarepear ];
+    maintainers = with lib.maintainers; [ squarepear ];
   };
-}
+})
