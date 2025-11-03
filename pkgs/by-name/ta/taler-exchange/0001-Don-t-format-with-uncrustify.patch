@@ -1,0 +1,26 @@
+From 35a77833616b62593b2cc4aa332c636bf0e7c8fc Mon Sep 17 00:00:00 2001
+From: eljamm <fedi.jamoussi@protonmail.ch>
+Date: Mon, 3 Nov 2025 10:07:52 +0100
+Subject: [PATCH] Don't format with uncrustify
+
+because contrib/uncrustify.cfg is missing
+---
+ contrib/gana-generate.sh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/contrib/gana-generate.sh b/contrib/gana-generate.sh
+index 619ed876a..b6d100845 100755
+--- a/contrib/gana-generate.sh
++++ b/contrib/gana-generate.sh
+@@ -45,7 +45,7 @@ ensure ()
+     tmp_dst="./$3/$fn.tmp"
+     dst="./$3/$fn"
+ 
+-    cat $src | uncrustify -l c -c uncrustify.cfg > $tmp_dst
++    cat $src > $tmp_dst
+     if ! diff $tmp_dst $dst > /dev/null
+     then
+         test ! -f $dst || chmod +w $dst
+-- 
+2.50.1
+

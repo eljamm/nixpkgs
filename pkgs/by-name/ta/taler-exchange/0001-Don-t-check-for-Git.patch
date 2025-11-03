@@ -1,0 +1,27 @@
+From 1fe3534d38a859c7fb00a511c402ff053d2b463a Mon Sep 17 00:00:00 2001
+From: eljamm <fedi.jamoussi@protonmail.ch>
+Date: Mon, 3 Nov 2025 09:58:00 +0100
+Subject: [PATCH] Don't check for Git
+
+---
+ contrib/gana-generate.sh | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/contrib/gana-generate.sh b/contrib/gana-generate.sh
+index 6708488a0..619ed876a 100755
+--- a/contrib/gana-generate.sh
++++ b/contrib/gana-generate.sh
+@@ -58,10 +58,6 @@ ensure ()
+ gana_update()
+ {
+     echo "Updating GANA..."
+-    if ! existence git; then
+-      echo "Script requires git"
+-      exit 1
+-    fi
+     if ! existence recfmt; then
+       echo "Script requires recutils"
+       exit 1
+-- 
+2.50.1
+

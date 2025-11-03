@@ -20,20 +20,24 @@
   texinfo,
   libtool,
   nixosTests,
+  gitUpdater,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "taler-exchange";
-  version = "1.0.4";
+  version = "1.1.4";
 
   src = fetchgit {
     url = "https://git.taler.net/exchange.git";
     tag = "v${finalAttrs.version}";
     fetchSubmodules = true;
-    hash = "sha256-k2e9pzy7vSIjCVGOVif9ntYvLcvoJA6J63vB/lg3iwA=";
+    hash = "sha256-GKhL91gK9kE/Iw6/VqzHFmIu19YCTwgyYea3cKZDmo4=";
   };
 
-  patches = [ ./0001-add-TALER_TEMPLATING_init_path.patch ];
+  patches = [
+    ./0001-Don-t-check-for-Git.patch
+    ./0001-Don-t-format-with-uncrustify.patch
+  ];
 
   nativeBuildInputs = [
     autoreconfHook
@@ -111,6 +115,10 @@ stdenv.mkDerivation (finalAttrs: {
   checkTarget = "check";
 
   passthru.tests = nixosTests.taler.basic;
+  passthru.updateScript = gitUpdater {
+    rev-prefix = "v";
+    ignoredVersions = "-"; # -dev and friends
+  };
 
   meta = {
     description = "Exchange component for the GNU Taler electronic payment system";
