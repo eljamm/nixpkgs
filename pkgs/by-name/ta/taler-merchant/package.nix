@@ -15,17 +15,18 @@
   texinfo,
   curl,
   nixosTests,
+  gitUpdater,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "taler-merchant";
-  version = "1.0.1";
+  version = "1.1.3";
 
   src = fetchgit {
     url = "https://git.taler.net/merchant.git";
     tag = "v${finalAttrs.version}";
     fetchSubmodules = true;
-    hash = "sha256-H/JqMGLP0u68g/bMqsollAk6sKL73TCZ9no49psYST0=";
+    hash = "sha256-D4IdQDHMG7yGgPIjY45cUPfeirblkwJQUVRzU2PLoWA=";
   };
 
   postUnpack = ''
@@ -35,10 +36,7 @@ stdenv.mkDerivation (finalAttrs: {
   # Use an absolute path for `templates` and `spa` directories, else a relative
   # path to the `taler-exchange` package is used.
   postPatch = ''
-    substituteInPlace src/backend/taler-merchant-httpd.c \
-      --replace-fail 'TALER_TEMPLATING_init (TALER_MERCHANT_project_data ())' "TALER_TEMPLATING_init_path (\"merchant\", \"$out/share/taler\")"
-
-    substituteInPlace src/backend/taler-merchant-httpd_spa.c \
+    substituteInPlace src/backend/taler-merchant-httpd_statics.c \
       --replace-fail 'GNUNET_DISK_directory_scan (dn,' "GNUNET_DISK_directory_scan (\"$out/share/taler/merchant/spa/\","
   '';
 
@@ -100,6 +98,10 @@ stdenv.mkDerivation (finalAttrs: {
   checkTarget = "check";
 
   passthru.tests = nixosTests.taler.basic;
+  passthru.updateScript = gitUpdater {
+    rev-prefix = "v";
+    ignoredVersions = "-"; # -dev and friends
+  };
 
   meta = {
     description = "Merchant component for the GNU Taler electronic payment system";
