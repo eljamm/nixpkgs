@@ -74,17 +74,17 @@ let
 in
 
 buildNpmPackage (finalAttrs: {
-  version = "2025.6.0";
+  version = "2025.9.0";
   pname = "cryptpad";
 
   src = fetchFromGitHub {
     owner = "cryptpad";
     repo = "cryptpad";
     tag = finalAttrs.version;
-    hash = "sha256-R8Oonrnb1tqvl1zTkWv5Xv/f8bFtUljD6X/re72IvsU=";
+    hash = "sha256-veLtKjrk1CZe2u3MkozsPK98hyhdsWbQGUxh8oWjLXg=";
   };
 
-  npmDepsHash = "sha256-4Zr+8ANZJ9XX2umY/SY7BrEHPheVelFSeZipgOaW6bI==";
+  npmDepsHash = "sha256-d/2JKGdC/tgDOo4Qr/0g83lh5gW6Varr0vkZUZe+WTA=";
 
   nativeBuildInputs = [
     makeBinaryWrapper
