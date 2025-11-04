@@ -1,5 +1,6 @@
 {
   bash,
+  stdenv,
   buildNpmPackage,
   coreutils,
   fetchFromGitHub,
@@ -81,7 +82,12 @@ buildNpmPackage (finalAttrs: {
     owner = "cryptpad";
     repo = "cryptpad";
     tag = finalAttrs.version;
-    hash = "sha256-veLtKjrk1CZe2u3MkozsPK98hyhdsWbQGUxh8oWjLXg=";
+    hash = "sha256-8XScBhkJstV6TxI0eTFewwjznL5WepsvmTrKXYW6SEc=";
+
+    # case-insensitivity on darwin results in a different hash
+    postFetch = ''
+      mv $out/FUNDING.json $out/FUNDING-2.json
+    '';
   };
 
   npmDepsHash = "sha256-d/2JKGdC/tgDOo4Qr/0g83lh5gW6Varr0vkZUZe+WTA=";
