@@ -18,21 +18,32 @@ let
   # nix version of install-onlyoffice.sh
   # a later version could rebuild from sdkjs/web-apps as per
   # https://github.com/cryptpad/onlyoffice-builds/blob/main/build.sh
-  onlyoffice_oldfetch =
-    rev: hash:
-    fetchFromGitHub {
-      inherit rev hash;
-      owner = "cryptpad";
-      repo = "onlyoffice-builds";
-    };
+  onlyoffice_fetch =
+    {
+      rev ? null,
+      version ? null,
+      hash,
+      ...
+    }:
 
-  # New method for v7+ versions that use ZIP releases
-  onlyoffice_newfetch =
-    version: hash:
-    fetchurl {
-      url = "https://github.com/cryptpad/onlyoffice-editor/releases/download/${version}/onlyoffice-editor.zip";
-      inherit hash;
-    };
+    assert (
+      lib.assertMsg (lib.xor (rev == null) (
+        version == null
+      )) "onlyoffice_fetch requires one of either `rev` or `version` to be provided (not both)."
+    );
+
+    if rev != null then
+      fetchFromGitHub {
+        inherit rev hash;
+        owner = "cryptpad";
+        repo = "onlyoffice-builds";
+      }
+    # New method for v7+ versions that use ZIP releases
+    else
+      fetchurl {
+        url = "https://github.com/cryptpad/onlyoffice-editor/releases/download/${version}/onlyoffice-editor.zip";
+        inherit hash;
+      };
 
   onlyoffice_install = oo: ''
     oo_dir="$out_cryptpad/www/common/onlyoffice/dist/${oo.subdir}"
@@ -40,7 +51,7 @@ let
       if oo ? "version" then
         ''
           mkdir -p "$oo_dir"
-          unzip ${onlyoffice_newfetch oo.version oo.hash} -d "$oo_dir"
+          unzip ${onlyoffice_fetch oo} -d "$oo_dir"
           echo "${oo.version}" > "$oo_dir/.version"
 
           # Clean up help files and dictionaries as per upstream
@@ -51,7 +62,7 @@ let
         ''
       else
         ''
-          cp -a "${onlyoffice_oldfetch oo.rev oo.hash}/." "$oo_dir"
+          cp -a "${onlyoffice_fetch oo}/." "$oo_dir"
           chmod -R +w "$oo_dir"
           echo "${oo.rev}" > "$oo_dir/.commit"
 
@@ -117,7 +128,7 @@ buildNpmPackage {
   src = fetchFromGitHub {
     owner = "cryptpad";
     repo = "cryptpad";
-    rev = version;
+    tag = version;
     hash = "sha256-R8Oonrnb1tqvl1zTkWv5Xv/f8bFtUljD6X/re72IvsU=";
   };
 
