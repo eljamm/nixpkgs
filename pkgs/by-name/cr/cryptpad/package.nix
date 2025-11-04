@@ -75,14 +75,14 @@ let
 in
 
 buildNpmPackage (finalAttrs: {
-  version = "2025.9.0";
+  version = "2025.6.0";
   pname = "cryptpad";
 
   src = fetchFromGitHub {
     owner = "cryptpad";
     repo = "cryptpad";
     tag = finalAttrs.version;
-    hash = "sha256-8XScBhkJstV6TxI0eTFewwjznL5WepsvmTrKXYW6SEc=";
+    hash = "sha256-9eZFPM1aqV9cLGBOJBR5I82N7982boNz86gJbfhQzQE=";
 
     # case-insensitivity on darwin results in a different hash
     postFetch = ''
@@ -90,7 +90,7 @@ buildNpmPackage (finalAttrs: {
     '';
   };
 
-  npmDepsHash = "sha256-d/2JKGdC/tgDOo4Qr/0g83lh5gW6Varr0vkZUZe+WTA=";
+  npmDepsHash = "sha256-4Zr+8ANZJ9XX2umY/SY7BrEHPheVelFSeZipgOaW6bI=";
 
   nativeBuildInputs = [
     makeBinaryWrapper
