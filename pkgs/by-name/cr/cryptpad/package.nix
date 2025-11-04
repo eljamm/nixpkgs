@@ -11,10 +11,10 @@
   nodejs,
   rdfind,
   unzip,
+  nix-update-script,
 }:
 
 let
-  version = "2025.6.0";
   # nix version of install-onlyoffice.sh
   # a later version could rebuild from sdkjs/web-apps as per
   # https://github.com/cryptpad/onlyoffice-builds/blob/main/build.sh
@@ -71,64 +71,16 @@ let
         ''
     }
   '';
-  onlyoffice_versions = [
-    {
-      subdir = "v1";
-      rev = "4f370beb";
-      hash = "sha256-TE/99qOx4wT2s0op9wi+SHwqTPYq/H+a9Uus9Zj4iSY=";
-    }
-    {
-      subdir = "v2b";
-      rev = "d9da72fd";
-      hash = "sha256-SiRDRc2vnLwCVnvtk+C8PKw7IeuSzHBaJmZHogRe3hQ=";
-    }
-    {
-      subdir = "v4";
-      rev = "6ebc6938";
-      hash = "sha256-eto1+8Tk/s3kbUCpbUh8qCS8EOq700FYG1/KiHyynaA=";
-    }
-    {
-      subdir = "v5";
-      rev = "88a356f0";
-      hash = "sha256-8j1rlAyHlKx6oAs2pIhjPKcGhJFj6ZzahOcgenyeOCc=";
-    }
-    {
-      subdir = "v6";
-      rev = "abd8a309";
-      hash = "sha256-BZdExj2q/bqUD3k9uluOot2dlrWKA+vpad49EdgXKww=";
-    }
-    {
-      subdir = "v7";
-      version = "v7.3.3.60+11";
-      hash = "sha256-He8RwsaJPBhaxFklA7vSxxNUpmcM41lW859gQUUJWbQ=";
-    }
-    {
-      subdir = "v8";
-      version = "v8.3.3.23+4";
-      hash = "sha256-DeK84fa7Jc1L1+vF8LBKLXM5oWS0SV2qBnAWG3Xzu4U=";
-    }
-  ];
-
-  x2t_version = "v7.3+1";
-  x2t = fetchurl {
-    url = "https://github.com/cryptpad/onlyoffice-x2t-wasm/releases/download/${x2t_version}/x2t.zip";
-    hash = "sha256-hrbxrI8RC1pBatGZ76TAiVfUbZid7+eRuXk6lmz7OgQ=";
-  };
-  x2t_install = ''
-    local X2T_DIR=$out_cryptpad/www/common/onlyoffice/dist/x2t
-    unzip ${x2t} -d "$X2T_DIR"
-    echo "${x2t_version}" > "$X2T_DIR"/.version
-  '';
-
 in
-buildNpmPackage {
-  inherit version;
+
+buildNpmPackage (finalAttrs: {
+  version = "2025.6.0";
   pname = "cryptpad";
 
   src = fetchFromGitHub {
     owner = "cryptpad";
     repo = "cryptpad";
-    tag = version;
+    tag = finalAttrs.version;
     hash = "sha256-R8Oonrnb1tqvl1zTkWv5Xv/f8bFtUljD6X/re72IvsU=";
   };
 
@@ -175,8 +127,8 @@ buildNpmPackage {
 
     # install OnlyOffice (install-onlyoffice.sh without network)
     mkdir -p "$out_cryptpad/www/common/onlyoffice/dist"
-    ${lib.concatMapStringsSep "\n" onlyoffice_install onlyoffice_versions}
-    ${x2t_install}
+    ${lib.concatMapStringsSep "\n" onlyoffice_install finalAttrs.passthru.onlyoffice_versions}
+    ${finalAttrs.passthru.x2t_install}
     # Run upstream's `install-onlyoffice.sh` script in `--check` mode to
     # verify that we've installed the correct versions of the various
     # OnlyOffice components.
@@ -200,7 +152,59 @@ buildNpmPackage {
       --run "if ! [ -d customize ]; then \"${lib.getExe nodejs}\" \"$out_cryptpad/scripts/build.js\"; fi"
   '';
 
-  passthru.tests.cryptpad = nixosTests.cryptpad;
+  passthru = {
+    tests.cryptpad = nixosTests.cryptpad;
+    updateScript = nix-update-script { };
+
+    onlyoffice_versions = [
+      {
+        subdir = "v1";
+        rev = "4f370beb";
+        hash = "sha256-TE/99qOx4wT2s0op9wi+SHwqTPYq/H+a9Uus9Zj4iSY=";
+      }
+      {
+        subdir = "v2b";
+        rev = "d9da72fd";
+        hash = "sha256-SiRDRc2vnLwCVnvtk+C8PKw7IeuSzHBaJmZHogRe3hQ=";
+      }
+      {
+        subdir = "v4";
+        rev = "6ebc6938";
+        hash = "sha256-eto1+8Tk/s3kbUCpbUh8qCS8EOq700FYG1/KiHyynaA=";
+      }
+      {
+        subdir = "v5";
+        rev = "88a356f0";
+        hash = "sha256-8j1rlAyHlKx6oAs2pIhjPKcGhJFj6ZzahOcgenyeOCc=";
+      }
+      {
+        subdir = "v6";
+        rev = "abd8a309";
+        hash = "sha256-BZdExj2q/bqUD3k9uluOot2dlrWKA+vpad49EdgXKww=";
+      }
+      {
+        subdir = "v7";
+        version = "v7.3.3.60+11";
+        hash = "sha256-He8RwsaJPBhaxFklA7vSxxNUpmcM41lW859gQUUJWbQ=";
+      }
+      {
+        subdir = "v8";
+        version = "v8.3.3.23+4";
+        hash = "sha256-DeK84fa7Jc1L1+vF8LBKLXM5oWS0SV2qBnAWG3Xzu4U=";
+      }
+    ];
+
+    x2t_version = "v7.3+1";
+    x2t = fetchurl {
+      url = "https://github.com/cryptpad/onlyoffice-x2t-wasm/releases/download/${finalAttrs.passthru.x2t_version}/x2t.zip";
+      hash = "sha256-hrbxrI8RC1pBatGZ76TAiVfUbZid7+eRuXk6lmz7OgQ=";
+    };
+    x2t_install = ''
+      local X2T_DIR=$out_cryptpad/www/common/onlyoffice/dist/x2t
+      unzip ${finalAttrs.passthru.x2t} -d "$X2T_DIR"
+      echo "${finalAttrs.passthru.x2t_version}" > "$X2T_DIR"/.version
+    '';
+  };
 
   meta = {
     description = "Collaborative office suite, end-to-end encrypted and open-source";
@@ -209,4 +213,4 @@ buildNpmPackage {
     mainProgram = "cryptpad";
     maintainers = with lib.maintainers; [ martinetd ];
   };
-}
+})
