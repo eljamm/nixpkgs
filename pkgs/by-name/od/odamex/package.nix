@@ -1,36 +1,82 @@
 {
   lib,
   stdenv,
-  fetchurl,
+  fetchFromGitHub,
+
   cmake,
-  pkg-config,
+  deutex,
   makeWrapper,
-  SDL,
-  SDL_mixer,
-  SDL_net,
+  pkg-config,
+
+  SDL2,
+  SDL2_mixer,
+  SDL2_net,
+  alsa-lib,
+  cpptrace,
+  curl,
+  expat,
+  fltk,
+  libdwarf,
+  libsysprof-capture,
+  libxkbcommon,
+  portmidi,
+  waylandpp,
   wxGTK32,
+  xorg,
+  zstd,
+
+  withX11 ? stdenv.hostPlatform.isLinux,
+  withWayland ? stdenv.hostPlatform.isLinux,
 }:
 
 stdenv.mkDerivation rec {
   pname = "odamex";
-  version = "0.9.5";
+  version = "11.1.1";
 
-  src = fetchurl {
-    url = "mirror://sourceforge/${pname}/${pname}-src-${version}.tar.bz2";
-    sha256 = "sha256-WBqO5fWzemw1kYlY192v0nnZkbIEVuWmjWYMy+1ODPQ=";
+  src = fetchFromGitHub {
+    owner = "odamex";
+    repo = "odamex";
+    tag = version;
+    hash = "sha256-UUUavIaU65vU80Bp2cVjHg8IubpA6qMqZmDYvTDjfEw=";
+    fetchSubmodules = true;
   };
 
   nativeBuildInputs = [
     cmake
-    pkg-config
+    deutex
     makeWrapper
+    pkg-config
   ];
 
   buildInputs = [
-    SDL
-    SDL_mixer
-    SDL_net
+    SDL2
+    SDL2_mixer
+    SDL2_net
+    curl
+    expat
+    fltk
+    libdwarf
+    libsysprof-capture
+    portmidi
     wxGTK32
+    zstd
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
+    alsa-lib
+    cpptrace # tests are failing on darwin
+  ]
+  ++ lib.optionals withX11 [
+    xorg.libX11
+    xorg.xorgproto
+  ]
+  ++ lib.optionals withWayland [
+    waylandpp
+    libxkbcommon
+  ];
+
+  cmakeFlags = [
+    (lib.cmakeBool "USE_INTERNAL_CPPTRACE" stdenv.hostPlatform.isDarwin)
+    (lib.cmakeBool "USE_EXTERNAL_LIBDWARF" stdenv.hostPlatform.isDarwin)
   ];
 
   installPhase = ''
