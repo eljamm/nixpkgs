@@ -7,6 +7,8 @@
   deutex,
   makeWrapper,
   pkg-config,
+  copyDesktopItems,
+  makeDesktopItem,
 
   SDL2,
   SDL2_mixer,
@@ -25,24 +27,27 @@
   xorg,
   zstd,
 
+  nix-update-script,
+
   withX11 ? stdenv.hostPlatform.isLinux,
   withWayland ? stdenv.hostPlatform.isLinux,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "odamex";
   version = "11.1.1";
 
   src = fetchFromGitHub {
     owner = "odamex";
     repo = "odamex";
-    tag = version;
+    tag = finalAttrs.version;
     hash = "sha256-UUUavIaU65vU80Bp2cVjHg8IubpA6qMqZmDYvTDjfEw=";
     fetchSubmodules = true;
   };
 
   nativeBuildInputs = [
     cmake
+    copyDesktopItems
     deutex
     makeWrapper
     pkg-config
@@ -81,28 +86,75 @@ stdenv.mkDerivation rec {
 
   installPhase = ''
     runHook preInstall
-  ''
-  + (
-    if stdenv.hostPlatform.isDarwin then
-      ''
-        mkdir -p $out/{Applications,bin}
-        mv odalaunch/odalaunch.app $out/Applications
-        makeWrapper $out/{Applications/odalaunch.app/Contents/MacOS,bin}/odalaunch
-      ''
-    else
-      ''
-        make install
-      ''
-  )
-  + ''
+
+    ${
+      if stdenv.hostPlatform.isDarwin then
+        ''
+          mkdir -p $out/{Applications,bin}
+          mv odalaunch/odalaunch.app $out/Applications
+          makeWrapper $out/{Applications/odalaunch.app/Contents/MacOS,bin}/odalaunch
+        ''
+      else
+        ''
+          make install
+        ''
+    }
+
+    # copy desktop file icons
+    for name in odamex odalaunch odasrv; do
+      for size in 96 128 256 512; do
+        install -Dm644 ../media/icon_"$name"_"$size".png \
+          $out/share/icons/hicolor/"$size"x"$size"/"$name".png
+      done
+    done
+
     runHook postInstall
   '';
+
+  desktopItems = [
+    (makeDesktopItem {
+      name = "odamex";
+      icon = "odamex";
+      exec = "odamex";
+      desktopName = "Odamex Client";
+      comment = "A Doom multiplayer game engine";
+      categories = [
+        "ActionGame"
+        "Game"
+        "Shooter"
+      ];
+    })
+    (makeDesktopItem {
+      name = "odalaunch";
+      icon = "odalaunch";
+      exec = "odalaunch";
+      desktopName = "Odamex Launcher";
+      comment = "Server Browser for Odamex";
+      categories = [
+        "ActionGame"
+        "Game"
+        "Shooter"
+      ];
+    })
+    (makeDesktopItem {
+      name = "odasrv";
+      icon = "odasrv";
+      exec = "odasrv";
+      desktopName = "Odamex Server";
+      comment = "Run an Odamex game server";
+      categories = [
+        "Network"
+      ];
+    })
+  ];
+
+  passthru.updateScript = nix-update-script { };
 
   meta = {
     homepage = "http://odamex.net/";
     description = "Client/server port for playing old-school Doom online";
     license = lib.licenses.gpl2Only;
     platforms = lib.platforms.unix;
-    maintainers = [ ];
+    maintainers = with lib.maintainers; [ eljamm ];
   };
-}
+})
