@@ -2,6 +2,7 @@
   lib,
   stdenv,
   fetchFromGitHub,
+  fetchpatch,
 
   cmake,
   deutex,
@@ -53,6 +54,16 @@ stdenv.mkDerivation (finalAttrs: {
     fetchSubmodules = true;
   };
 
+  patches = [
+    # fix file-open panel on Darwin
+    # https://github.com/odamex/odamex/pull/1402
+    # TODO: remove on next release
+    (fetchpatch {
+      url = "https://patch-diff.githubusercontent.com/raw/odamex/odamex/pull/1402.patch";
+      hash = "sha256-JrcQ0rYkaFP5aKNWeXbrY2TN4r8nHpue19qajNXJXg4=";
+    })
+  ];
+
   nativeBuildInputs = [
     cmake
     copyDesktopItems
@@ -89,24 +100,12 @@ stdenv.mkDerivation (finalAttrs: {
 
   cmakeFlags = [
     (lib.cmakeBool "USE_INTERNAL_CPPTRACE" false)
+  ]
+  ++ lib.optionals (!stdenv.hostPlatform.isDarwin) [
+    (lib.cmakeFeature "ODAMEX_INSTALL_BINDIR" "$ODAMEX_DIR/bin")
   ];
 
-  installPhase = ''
-    runHook preInstall
-
-    ${
-      if stdenv.hostPlatform.isDarwin then
-        ''
-          mkdir -p $out/{Applications,bin}
-          mv odalaunch/odalaunch.app $out/Applications
-          makeWrapper $out/{Applications/odalaunch.app/Contents/MacOS,bin}/odalaunch
-        ''
-      else
-        ''
-          make install
-        ''
-    }
-
+  postInstall = ''
     # copy desktop file icons
     for name in odamex odalaunch odasrv; do
       for size in 96 128 256 512; do
@@ -114,8 +113,11 @@ stdenv.mkDerivation (finalAttrs: {
           $out/share/icons/hicolor/"$size"x"$size"/"$name".png
       done
     done
+  '';
 
-    runHook postInstall
+  postFixup = lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
+    wrapProgram $out/bin/odalaunch \
+      --set ODAMEX_DIR "${placeholder "out"}"
   '';
 
   desktopItems = [
@@ -163,5 +165,6 @@ stdenv.mkDerivation (finalAttrs: {
     license = lib.licenses.gpl2Only;
     platforms = lib.platforms.unix;
     maintainers = with lib.maintainers; [ eljamm ];
+    mainProgram = "odalaunch";
   };
 })
