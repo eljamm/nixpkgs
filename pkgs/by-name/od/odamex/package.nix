@@ -32,6 +32,8 @@
 
   withX11 ? stdenv.hostPlatform.isLinux,
   withWayland ? stdenv.hostPlatform.isLinux,
+
+  breakpointHook,
 }:
 
 let
@@ -111,11 +113,10 @@ stdenv.mkDerivation (finalAttrs: {
         # bash
         ''
           mkdir -p $out/{Applications,bin}
-
+          mv *.app $out/Applications
           for name in odamex odalaunch; do
-            mv "$name/$name.app" $out/Applications
             makeWrapper $out/{Applications/"$name".app/Contents/MacOS,bin}/"$name" \
-              --set ODAMEX_BINDIR "${placeholder "out"}/Applications/odamex.app/Contents/MacOS"
+              --set ODAMEX_BINDIR "${placeholder "out"}/Applications"
           done
         ''
       else
