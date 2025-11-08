@@ -100,24 +100,46 @@ stdenv.mkDerivation (finalAttrs: {
 
   cmakeFlags = [
     (lib.cmakeBool "USE_INTERNAL_CPPTRACE" false)
-  ]
-  ++ lib.optionals (!stdenv.hostPlatform.isDarwin) [
-    (lib.cmakeFeature "ODAMEX_INSTALL_BINDIR" "$ODAMEX_DIR/bin")
+    (lib.cmakeFeature "ODAMEX_INSTALL_BINDIR" "$ODAMEX_BINDIR") # set by wrapper
   ];
 
-  postInstall = ''
-    # copy desktop file icons
-    for name in odamex odalaunch odasrv; do
-      for size in 96 128 256 512; do
-        install -Dm644 ../media/icon_"$name"_"$size".png \
-          $out/share/icons/hicolor/"$size"x"$size"/"$name".png
-      done
-    done
+  installPhase = ''
+    runHook preInstall
+
+    ${
+      if stdenv.hostPlatform.isDarwin then
+        # bash
+        ''
+          mkdir -p $out/{Applications,bin}
+
+          for name in odamex odalaunch; do
+            mv "$name/$name.app" $out/Applications
+            makeWrapper $out/{Applications/"$name".app/Contents/MacOS,bin}/"$name" \
+              --set ODAMEX_BINDIR "${placeholder "out"}/Applications/odamex.app/Contents/MacOS"
+          done
+        ''
+      else
+        # bash
+        ''
+          make install
+
+          # copy desktop file icons
+          for name in odamex odalaunch odasrv; do
+            for size in 96 128 256 512; do
+              install -Dm644 ../media/icon_"$name"_"$size".png \
+                $out/share/icons/hicolor/"$size"x"$size"/"$name".png
+            done
+          done
+        ''
+    }
+
+
+    runHook postInstall
   '';
 
   postFixup = lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
     wrapProgram $out/bin/odalaunch \
-      --set ODAMEX_DIR "${placeholder "out"}"
+      --set ODAMEX_BINDIR "${placeholder "out"}/bin"
   '';
 
   desktopItems = [
