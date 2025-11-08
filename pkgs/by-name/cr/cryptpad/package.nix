@@ -11,6 +11,12 @@
   nodejs,
   rdfind,
   unzip,
+  # Cryptpad supports multiple versions of onlyoffice
+  # The first version supported in nixpkgs came with v7 installed so no docment have been
+  # created with an older version and we don't need anything earlier
+  # The old versions are only needed until all files have been opened with a newer version
+  # available
+  oldest_needed_version ? "v7",
 }:
 
 let
@@ -46,10 +52,15 @@ let
   onlyoffice_install = oo: ''
     oo_dir="$out_cryptpad/www/common/onlyoffice/dist/${oo.subdir}"
     ${
-      if oo ? "version" then
+      if lib.versionOlder oo.subdir oldest_needed_version then
+        ''
+          echo "Skipping onlyoffice ${oo.subdir} (< ${oldest_needed_version})"
+        ''
+      else if oo ? "version" then
         ''
           mkdir -p "$oo_dir"
-          unzip ${onlyoffice_fetch oo} -d "$oo_dir"
+          echo "Installing onlyoffice ${oo.subdir}"
+          unzip -q ${onlyoffice_fetch oo} -d "$oo_dir"
           echo "${oo.version}" > "$oo_dir/.version"
 
           # Clean up help files and dictionaries as per upstream
@@ -60,6 +71,7 @@ let
         ''
       else
         ''
+          echo "Installing onlyoffice ${oo.subdir}"
           cp -a "${onlyoffice_fetch oo}/." "$oo_dir"
           chmod -R +w "$oo_dir"
           echo "${oo.rev}" > "$oo_dir/.commit"
@@ -113,8 +125,9 @@ let
     hash = "sha256-hrbxrI8RC1pBatGZ76TAiVfUbZid7+eRuXk6lmz7OgQ=";
   };
   x2t_install = ''
+    echo "Installing x2t"
     local X2T_DIR=$out_cryptpad/www/common/onlyoffice/dist/x2t
-    unzip ${x2t} -d "$X2T_DIR"
+    unzip -q ${x2t} -d "$X2T_DIR"
     echo "${x2t_version}" > "$X2T_DIR"/.version
   '';
 
@@ -185,7 +198,7 @@ buildNpmPackage {
     patchShebangs --build $out_cryptpad/install-onlyoffice.sh
     mkdir -p $out_cryptpad/onlyoffice-conf
     # Need to set this to verify older versions - next commit will optimize
-    echo oldest_needed_version=v1 > $out_cryptpad/onlyoffice-conf/onlyoffice.properties
+    echo oldest_needed_version=${oldest_needed_version} > $out_cryptpad/onlyoffice-conf/onlyoffice.properties
     $out_cryptpad/install-onlyoffice.sh --accept-license --check --rdfind
 
     # cryptpad assumes it runs in the source directory and also outputs
