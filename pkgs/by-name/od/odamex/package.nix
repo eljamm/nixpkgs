@@ -33,6 +33,14 @@
   withWayland ? stdenv.hostPlatform.isLinux,
 }:
 
+let
+  cpptrace' = cpptrace.overrideAttrs {
+    # tests are failing on darwin
+    # https://hydra.nixos.org/build/310535948
+    doCheck = !stdenv.hostPlatform.isDarwin;
+  };
+in
+
 stdenv.mkDerivation (finalAttrs: {
   pname = "odamex";
   version = "11.1.1";
@@ -57,6 +65,7 @@ stdenv.mkDerivation (finalAttrs: {
     SDL2
     SDL2_mixer
     SDL2_net
+    cpptrace'
     curl
     expat
     fltk
@@ -68,7 +77,6 @@ stdenv.mkDerivation (finalAttrs: {
   ]
   ++ lib.optionals stdenv.hostPlatform.isLinux [
     alsa-lib
-    cpptrace # tests are failing on darwin
   ]
   ++ lib.optionals withX11 [
     xorg.libX11
@@ -80,8 +88,7 @@ stdenv.mkDerivation (finalAttrs: {
   ];
 
   cmakeFlags = [
-    (lib.cmakeBool "USE_INTERNAL_CPPTRACE" stdenv.hostPlatform.isDarwin)
-    (lib.cmakeBool "USE_EXTERNAL_LIBDWARF" stdenv.hostPlatform.isDarwin)
+    (lib.cmakeBool "USE_INTERNAL_CPPTRACE" false)
   ];
 
   installPhase = ''
