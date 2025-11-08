@@ -32,8 +32,6 @@
 
   withX11 ? stdenv.hostPlatform.isLinux,
   withWayland ? stdenv.hostPlatform.isLinux,
-
-  breakpointHook,
 }:
 
 let
@@ -107,6 +105,8 @@ stdenv.mkDerivation (finalAttrs: {
 
   installPhase = ''
     runHook preInstall
+
+    exit 1
 
     ${
       if stdenv.hostPlatform.isDarwin then
