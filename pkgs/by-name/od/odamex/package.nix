@@ -106,17 +106,21 @@ stdenv.mkDerivation (finalAttrs: {
   installPhase = ''
     runHook preInstall
 
-    exit 1
-
     ${
       if stdenv.hostPlatform.isDarwin then
         # bash
         ''
           mkdir -p $out/{Applications,bin}
-          mv *.app $out/Applications
+
+          cp server/odasrv $out/bin
+          mv client odamex
+
           for name in odamex odalaunch; do
-            makeWrapper $out/{Applications/"$name".app/Contents/MacOS,bin}/"$name" \
+            contents="Applications/"$name".app/Contents/MacOS"
+            mv $name/*.app $out/Applications
+            makeWrapper $out/{"$contents",bin}/"$name" \
               --set ODAMEX_BINDIR "${placeholder "out"}/Applications"
+            ln -s "$contents/$name" $out/bin
           done
         ''
       else
