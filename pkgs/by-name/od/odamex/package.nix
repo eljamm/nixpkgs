@@ -42,6 +42,7 @@
 }:
 
 let
+  # TODO: remove when this is resolved, likely at the next cpptrace bump
   cpptrace' = cpptrace.overrideAttrs {
     # tests are failing on darwin
     # https://hydra.nixos.org/build/310535948
@@ -128,16 +129,17 @@ stdenv.mkDerivation (finalAttrs: {
         ''
           mkdir -p $out/{Applications,bin}
 
-          cp server/odasrv $out/bin
           mv client odamex
-
           for name in odamex odalaunch; do
-            contents="Applications/"$name".app/Contents/MacOS"
+            contents="Applications/$name.app/Contents/MacOS"
             mv $name/*.app $out/Applications
             makeWrapper $out/{"$contents",bin}/"$name" \
               --set ODAMEX_BINDIR "${placeholder "out"}/Applications"
-            ln -s "$contents/$name" $out/bin
           done
+
+          cp server/odasrv $out/Applications
+          ln -s $out/Applications/odamex.app/Contents/MacOS/odamex.wad $out/Applications
+          makeWrapper $out/{Applications,bin}/odasrv
         ''
       else
         # bash
@@ -156,7 +158,6 @@ stdenv.mkDerivation (finalAttrs: {
           done
         ''
     }
-
 
     runHook postInstall
   '';
