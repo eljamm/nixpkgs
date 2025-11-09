@@ -5,11 +5,12 @@
   fetchpatch,
 
   cmake,
+  copyDesktopItems,
   deutex,
+  makeDesktopItem,
   makeWrapper,
   pkg-config,
-  copyDesktopItems,
-  makeDesktopItem,
+  wrapGAppsHook3,
 
   SDL2,
   SDL2_mixer,
@@ -20,9 +21,15 @@
   expat,
   fltk,
   libdwarf,
+  libselinux,
+  libsepol,
   libsysprof-capture,
+  libuuid,
+  libxdmcp,
   libxkbcommon,
+  pcre2,
   portmidi,
+  wayland-scanner,
   waylandpp,
   wxGTK32,
   xorg,
@@ -70,6 +77,9 @@ stdenv.mkDerivation (finalAttrs: {
     deutex
     makeWrapper
     pkg-config
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
+    wrapGAppsHook3
   ];
 
   buildInputs = [
@@ -82,20 +92,26 @@ stdenv.mkDerivation (finalAttrs: {
     fltk
     libdwarf
     libsysprof-capture
+    pcre2
     portmidi
     wxGTK32
     zstd
   ]
   ++ lib.optionals stdenv.hostPlatform.isLinux [
     alsa-lib
+    libselinux
+    libuuid
+    libxdmcp
+    libsepol
   ]
   ++ lib.optionals withX11 [
     xorg.libX11
     xorg.xorgproto
   ]
   ++ lib.optionals withWayland [
-    waylandpp
     libxkbcommon
+    wayland-scanner
+    waylandpp
   ];
 
   cmakeFlags = [
@@ -134,6 +150,9 @@ stdenv.mkDerivation (finalAttrs: {
               install -Dm644 ../media/icon_"$name"_"$size".png \
                 $out/share/icons/hicolor/"$size"x"$size"/"$name".png
             done
+
+            install -Dm644 ../media/icon_"$name"_128.png \
+              $out/share/pixmaps/"$name".png
           done
         ''
     }
@@ -142,9 +161,10 @@ stdenv.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
-  postFixup = lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
-    wrapProgram $out/bin/odalaunch \
+  preFixup = lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
+    gappsWrapperArgs+=(
       --set ODAMEX_BINDIR "${placeholder "out"}/bin"
+    )
   '';
 
   desktopItems = [
