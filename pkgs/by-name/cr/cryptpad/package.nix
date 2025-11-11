@@ -140,7 +140,11 @@ buildNpmPackage {
     owner = "cryptpad";
     repo = "cryptpad";
     tag = version;
-    hash = "sha256-veLtKjrk1CZe2u3MkozsPK98hyhdsWbQGUxh8oWjLXg=";
+    hash = "sha256-8XScBhkJstV6TxI0eTFewwjznL5WepsvmTrKXYW6SEc=";
+    # case-insensitive file results in different hash on darwin, rename to avoid collision
+    postFetch = ''
+      mv $out/FUNDING.json $out/FUNDING-2.json
+    '';
   };
 
   npmDepsHash = "sha256-d/2JKGdC/tgDOo4Qr/0g83lh5gW6Varr0vkZUZe+WTA=";
