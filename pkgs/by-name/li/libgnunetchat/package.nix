@@ -12,16 +12,17 @@
   libsodium,
   libgcrypt,
   libextractor,
+  gitUpdater,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
-  name = "libgnunetchat";
-  version = "0.6.0";
+  pname = "libgnunetchat";
+  version = "0.6.1";
 
   src = fetchgit {
     url = "https://git.gnunet.org/libgnunetchat.git";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-pRO8i7tHynCqm97RLMBOiWKCl2CAYBE6RXfyIljIiQ0=";
+    hash = "sha256-FKFoIuGGPcYVRBrsqn1rnodRVCLAjLKlgZOs9v4H+8w=";
   };
 
   strictDeps = true;
@@ -46,6 +47,8 @@ stdenv.mkDerivation (finalAttrs: {
   prePatch = "mkdir -p $out/lib";
 
   passthru.tests.pkg-config = testers.testMetaPkgConfig finalAttrs.finalPackage;
+
+  passthru.updateScript = gitUpdater { rev-prefix = "v"; };
 
   meta = {
     pkgConfigModules = [ "gnunetchat" ];
