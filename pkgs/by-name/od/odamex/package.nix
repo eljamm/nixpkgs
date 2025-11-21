@@ -2,7 +2,6 @@
   lib,
   stdenv,
   fetchFromGitHub,
-  fetchpatch,
 
   cmake,
   copyDesktopItems,
@@ -61,16 +60,6 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-f9st852Sqmdmb/qNP1ioBY9MApt9Ruw8dBjkkyGM5Qs=";
     fetchSubmodules = true;
   };
-
-  patches = [
-    # fix file-open panel on Darwin
-    # https://github.com/odamex/odamex/pull/1402
-    # TODO: remove on next release
-    (fetchpatch {
-      url = "https://patch-diff.githubusercontent.com/raw/odamex/odamex/pull/1402.patch";
-      hash = "sha256-JrcQ0rYkaFP5aKNWeXbrY2TN4r8nHpue19qajNXJXg4=";
-    })
-  ];
 
   nativeBuildInputs = [
     cmake
