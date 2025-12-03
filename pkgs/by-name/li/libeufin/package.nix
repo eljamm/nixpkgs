@@ -16,12 +16,12 @@ let
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "libeufin";
-  version = "1.0.2";
+  version = "1.2.0-dev.2";
 
   src = fetchgit {
-    url = "https://git.taler.net/libeufin.git/";
+    url = "https://git-www.taler.net/libeufin.git";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-ZjZo0oCsrnc413OY7ElU95Vto9Smp6fuPI3RzJzC3Zk=";
+    hash = "sha256-NvmGMMNljvBtt/IvWbvQWgdAvDru5GbsoudQtdBHKV0=";
     fetchSubmodules = true;
     leaveDotGit = true; # required for correct submodule fetching
     # Save the HEAD short commit hash in a file so it can be retrieved later for versioning.
@@ -39,7 +39,9 @@ stdenv.mkDerivation (finalAttrs: {
 
     # The .git folder had to be deleted. Read hash from file instead of using the git command.
     substituteInPlace build.gradle \
-      --replace-fail "commandLine 'git', 'rev-parse', '--short', 'HEAD'" 'commandLine "cat", "$projectDir/common/src/main/resources/HEAD.txt"'
+      --replace-fail \
+        "'git rev-parse --short HEAD'" \
+        "'cat common/src/main/resources/HEAD.txt'"
 
     # Use gradle repo to download dependencies
     substituteInPlace build.gradle \
