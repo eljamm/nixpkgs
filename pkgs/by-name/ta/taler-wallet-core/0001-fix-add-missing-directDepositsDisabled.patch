@@ -1,0 +1,37 @@
+From b681d5e4919fc676871d1b4540120fac042f701e Mon Sep 17 00:00:00 2001
+From: eljamm <fedi.jamoussi@protonmail.ch>
+Date: Wed, 3 Dec 2025 12:40:00 +0100
+Subject: [PATCH] fix: add missing directDepositsDisabled
+
+---
+ .../taler-wallet-webextension/src/wallet/AddExchange/test.ts     | 1 +
+ .../src/wallet/DestinationSelection/test.ts                      | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/packages/taler-wallet-webextension/src/wallet/AddExchange/test.ts b/packages/taler-wallet-webextension/src/wallet/AddExchange/test.ts
+index d0e78a9..8b91086 100644
+--- a/packages/taler-wallet-webextension/src/wallet/AddExchange/test.ts
++++ b/packages/taler-wallet-webextension/src/wallet/AddExchange/test.ts
+@@ -63,6 +63,7 @@ describe("AddExchange states", () => {
+             lastUpdateTimestamp: undefined,
+             noFees: false,
+             peerPaymentsDisabled: false,
++            directDepositsDisabled: false,
+           },
+         ],
+       },
+diff --git a/packages/taler-wallet-webextension/src/wallet/DestinationSelection/test.ts b/packages/taler-wallet-webextension/src/wallet/DestinationSelection/test.ts
+index 9e75f0b..857c9b8 100644
+--- a/packages/taler-wallet-webextension/src/wallet/DestinationSelection/test.ts
++++ b/packages/taler-wallet-webextension/src/wallet/DestinationSelection/test.ts
+@@ -53,6 +53,7 @@ const exchangeArs: ExchangeListItem = {
+   lastUpdateTimestamp: undefined,
+   noFees: false,
+   peerPaymentsDisabled: false,
++  directDepositsDisabled: false,
+ };
+ 
+ describe("Destination selection states", () => {
+-- 
+2.51.2
+
