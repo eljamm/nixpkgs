@@ -14,12 +14,12 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "taler-twister";
-  version = "1.0.0";
+  version = "1.1.0";
 
   src = fetchgit {
-    url = "https://git.taler.net/twister.git";
+    url = "https://git-www.taler.net/twister.git";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-ir+kU9bCWwhqR88hmNHB5cm1DXOQowI5y6GdhWpX/L0=";
+    hash = "sha256-XZ8/e9hdDBp1JEPWsi90Zu41PPN4uqul67/kjyBwszI=";
   };
 
   nativeBuildInputs = [
