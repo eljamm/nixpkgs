@@ -1,22 +1,23 @@
 {
   stdenv,
-  fetchurl,
   fetchgit,
+  fetchurl,
+
+  # build
+  pkg-config,
+  wrapGAppsHook3,
+  gnutls,
+  meson,
+  ninja,
+
+  # deps
   glade,
   gnunet,
-  gnutls,
   gtk3,
   libextractor,
   libgcrypt,
   libsodium,
   libxml2,
-  pkg-config,
-  wrapGAppsHook3,
-  meson,
-  ninja,
-  libtool,
-  autoconf,
-  automake,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -25,27 +26,23 @@ stdenv.mkDerivation (finalAttrs: {
 
   src = fetchgit {
     url = "https://git-www.taler.net/gnunet-gtk.git";
-    # tag = "v${finalAttrs.version}";
-    rev = "ee1b6f7eca406b1601d67ddab1529fb718653b2a";
-    hash = "sha256-t8Zx7Kgtq/9zaQa5FsPfsGKlNRIBfWPVfXShJBThRXE=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-LvkIdJvJKo5Oa2iuN4TXiFwpO48k3uzVyjoFY9jzY0w=";
   };
 
-  # strictDeps = true;
+  strictDeps = true;
 
   nativeBuildInputs = [
     pkg-config
     wrapGAppsHook3
     gnutls
-    libtool
-    autoconf
-    automake
     meson
     ninja
   ];
 
   buildInputs = [
     glade
-    gnunet
+    finalAttrs.passthru.gnunet
     gnutls
     gtk3
     libextractor
@@ -56,28 +53,27 @@ stdenv.mkDerivation (finalAttrs: {
 
   configureFlags = [ "--with-gnunet=${finalAttrs.passthru.gnunet}" ];
 
-  # Fix build with GCC14
-  env.NIX_CFLAGS_COMPILE = toString [
-    "-Wno-error=deprecated-declarations"
-    "-Wno-error=incompatible-pointer-types"
-  ];
-
-  postPatch = "patchShebangs pixmaps/icon-theme-installer";
-
-  # configurePhase = ''
-  #   ./bootstrap
-  #   ./configure --prefix=${placeholder "out"} "--with-gnunet=${gnunet}"
-  # '';
-  #
-  # buildPhase = ''
-  #   make all
-  # '';
+  postPatch = ''
+    patchShebangs pixmaps/icon-theme-installer
+  '';
 
   postInstall = ''
-    ln -s $out/share/gnunet-gtk/gnunet_logo.png $out/share/gnunet/gnunet-logo-color.png
+    pushd ../pixmaps
+      for pixmap in *.{png,svg}; do
+          if [ -f "$pixmap" ]; then
+              install -D "$pixmap" "$out/share/gnunet-gtk/$pixmap"
+          fi
+      done
+    popd
+
+    pushd $out/share/gnunet-gtk
+      ln -s gnunet_logo.png gnunet-logo-color.png
+    popd
   '';
 
   passthru = {
+    # `gnunet-gtk` requires approximately the same version as `gnunet`, as the
+    # build fails with newer versions
     gnunet = gnunet.overrideAttrs (oldAttrs: {
       inherit (finalAttrs) version;
       src = fetchurl {
