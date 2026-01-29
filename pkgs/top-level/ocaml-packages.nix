@@ -702,17 +702,17 @@ let
 
         gendarme = callPackage ../development/ocaml-modules/gendarme { };
 
-        gendarme-csv = callPackage ../development/ocaml-modules/gendarme-csv { };
+        gendarme-csv = callPackage ../development/ocaml-modules/gendarme/encoders { type = "csv"; };
 
-        gendarme-ezjsonm = callPackage ../development/ocaml-modules/gendarme-ezjsonm { };
+        gendarme-ezjsonm = callPackage ../development/ocaml-modules/gendarme/encoders { type = "ezjsonm"; };
 
-        gendarme-json = callPackage ../development/ocaml-modules/gendarme-json { };
+        gendarme-json = callPackage ../development/ocaml-modules/gendarme/encoders { type = "json"; };
 
-        gendarme-toml = callPackage ../development/ocaml-modules/gendarme-toml { };
+        gendarme-toml = callPackage ../development/ocaml-modules/gendarme/encoders { type = "toml"; };
 
-        gendarme-yaml = callPackage ../development/ocaml-modules/gendarme-yaml { };
+        gendarme-yaml = callPackage ../development/ocaml-modules/gendarme/encoders { type = "yaml"; };
 
-        gendarme-yojson = callPackage ../development/ocaml-modules/gendarme-yojson { };
+        gendarme-yojson = callPackage ../development/ocaml-modules/gendarme/encoders { type = "yojson"; };
 
         genspio = callPackage ../development/ocaml-modules/genspio { };
 
