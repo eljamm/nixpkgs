@@ -11,7 +11,6 @@
   yarnBuildHook,
   yarnConfigHook,
   yarnInstallHook,
-  rsync,
 
   withElectron ? false,
   yarn,
@@ -42,11 +41,10 @@ stdenv.mkDerivation (finalAttrs: {
   outputs = [
     "out"
     "deps"
-    "electronDeps"
-  ];
+  ]
+  ++ lib.optional withElectron "electronDeps";
 
   nativeBuildInputs = [
-    rsync
     fixup-yarn-lock
     node-gyp-build
     nodejs # needed for executing package.json scripts
@@ -54,13 +52,10 @@ stdenv.mkDerivation (finalAttrs: {
     yarnBuildHook
     yarnConfigHook
     yarnInstallHook
-    electron
   ];
 
   dontConfigure = true;
-
   yarnBuildScript = if withElectron then "electron" else "build";
-  env.ELECTRON_SKIP_BINARY_DOWNLOAD = "1";
 
   preBuild = ''
     originalOfflineMirror=$(yarn config --offline get yarn-offline-mirror)
@@ -78,9 +73,11 @@ stdenv.mkDerivation (finalAttrs: {
 
     installDeps $yarnOfflineCache $deps
 
-    pushd app
-    installDeps ${finalAttrs.passthru.appOfflineCache} $electronDeps
-    popd
+    ${lib.optionalString withElectron ''
+      pushd app
+        installDeps ${finalAttrs.passthru.appOfflineCache} $electronDeps
+      popd
+    ''}
 
     yarn config --offline set yarn-offline-mirror $originalOfflineMirror
   '';
