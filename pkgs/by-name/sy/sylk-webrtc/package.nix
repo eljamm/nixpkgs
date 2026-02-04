@@ -6,12 +6,15 @@
   fixup-yarn-lock,
   node-gyp-build,
   nodejs,
-  serve,
   writableTmpDirAsHomeHook,
-  xsel,
+  electron,
   yarnBuildHook,
   yarnConfigHook,
   yarnInstallHook,
+
+  withElectron ? false,
+  serve,
+  xsel,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -38,9 +41,13 @@ stdenv.mkDerivation (finalAttrs: {
     yarnBuildHook
     yarnConfigHook
     yarnInstallHook
+    electron
   ];
 
   dontConfigure = true;
+
+  yarnBuildScript = if withElectron then "electron" else "build";
+  env.ELECTRON_SKIP_BINARY_DOWNLOAD = "1";
 
   preBuild = ''
     fixup-yarn-lock yarn.lock
@@ -50,17 +57,30 @@ stdenv.mkDerivation (finalAttrs: {
     yarn install \
       --offline \
       --frozen-lockfile \
-      --ignore-engines --ignore-scripts
+      --ignore-engines \
+      --ignore-scripts
+
+    yarn install \
+      --offline
 
     patchShebangs node_modules/
   '';
 
   postFixup = ''
-    rm -rf $out/.parcel-cache
+    rm -rf $out/lib/node_modules/Sylk/.parcel-cache
 
-    makeWrapper ${lib.getExe serve} $out/bin/sylk-webrtc \
-      --prefix PATH : ${lib.makeBinPath [ xsel ]} \
-      --chdir $out
+    ${lib.optionalString withElectron ''
+      makeWrapper ${lib.getExe electron} $out/bin/sylk-webrtc \
+        --add-flags $out/lib/node_modules/Sylk/app \
+        --inherit-argv0
+    ''}
+
+    ${lib.optionalString (!withElectron) ''
+      makeWrapper ${lib.getExe serve} $out/bin/sylk-webrtc \
+        --prefix PATH : ${lib.makeBinPath [ xsel ]} \
+        --chdir $out/lib/node_modules/Sylk
+        --inherit-argv0
+    ''}
   '';
 
   meta = {
