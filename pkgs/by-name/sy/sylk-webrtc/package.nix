@@ -50,38 +50,51 @@ stdenv.mkDerivation (finalAttrs: {
   env.ELECTRON_SKIP_BINARY_DOWNLOAD = "1";
 
   preBuild = ''
-    fixup-yarn-lock yarn.lock
+    installDeps() {
+      local cache="$1"
 
-    yarn config --offline set yarn-offline-mirror $yarnOfflineCache
+      fixup-yarn-lock yarn.lock
 
-    yarn install \
-      --offline \
-      --frozen-lockfile \
-      --ignore-engines \
-      --ignore-scripts
+      yarn config --offline set yarn-offline-mirror "$cache"
+      yarn install --offline --frozen-lockfile --ignore-engines --ignore-scripts
 
-    yarn install \
-      --offline
+      patchShebangs node_modules/
+    }
 
-    patchShebangs node_modules/
+    installDeps $yarnOfflineCache
+
+    pushd app
+    installDeps ${finalAttrs.passthru.appOfflineCache}
+    popd
   '';
 
   postFixup = ''
-    rm -rf $out/lib/node_modules/Sylk/.parcel-cache
+    mkdir -p $out/share
+    mv $out/lib/node_modules/Sylk $out/share/Sylk
+
+    rm -rf $out/share/Sylk/{.parcel-cache,node_modules}
+    cp -R node_modules $out/share/Sylk
+    cp -R app/node_modules $out/share/Sylk/app
 
     ${lib.optionalString withElectron ''
       makeWrapper ${lib.getExe electron} $out/bin/sylk-webrtc \
-        --add-flags $out/lib/node_modules/Sylk/app \
+        --add-flags $out/share/Sylk/app \
         --inherit-argv0
     ''}
 
     ${lib.optionalString (!withElectron) ''
       makeWrapper ${lib.getExe serve} $out/bin/sylk-webrtc \
         --prefix PATH : ${lib.makeBinPath [ xsel ]} \
-        --chdir $out/lib/node_modules/Sylk
+        --chdir $out/share/Sylk \
         --inherit-argv0
     ''}
   '';
+
+  # required for electron
+  passthru.appOfflineCache = fetchYarnDeps {
+    yarnLock = finalAttrs.src + "/app/yarn.lock";
+    hash = "sha256-S9L/rveTuXF2vSqSDu+NlV5vP5f28lda/KMGU8iS1Zo=";
+  };
 
   meta = {
     description = "Sylk WebRTC client";
