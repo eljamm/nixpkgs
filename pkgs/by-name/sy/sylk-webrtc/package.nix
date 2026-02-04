@@ -14,8 +14,7 @@
   rsync,
 
   withElectron ? false,
-  serve,
-  xsel,
+  yarn,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -32,6 +31,12 @@ stdenv.mkDerivation (finalAttrs: {
   yarnOfflineCache = fetchYarnDeps {
     yarnLock = finalAttrs.src + "/yarn.lock";
     hash = "sha256-VY97NPnT1225l6SLyTI3qITBGF7rqE5xz6UVVucblcU=";
+  };
+
+  # required for electron
+  passthru.appOfflineCache = fetchYarnDeps {
+    yarnLock = finalAttrs.src + "/app/yarn.lock";
+    hash = "sha256-S9L/rveTuXF2vSqSDu+NlV5vP5f28lda/KMGU8iS1Zo=";
   };
 
   outputs = [
@@ -98,18 +103,12 @@ stdenv.mkDerivation (finalAttrs: {
     ''}
 
     ${lib.optionalString (!withElectron) ''
-      makeWrapper ${lib.getExe serve} $out/bin/sylk-webrtc \
-        --prefix PATH : ${lib.makeBinPath [ xsel ]} \
-        --chdir $out/share/Sylk/src \
+      makeWrapper ${lib.getExe yarn} $out/bin/sylk-webrtc \
+        --add-flags "run node_modules/.bin/parcel serve ./src/index.html" \
+        --chdir $out/share/Sylk \
         --inherit-argv0
     ''}
   '';
-
-  # required for electron
-  passthru.appOfflineCache = fetchYarnDeps {
-    yarnLock = finalAttrs.src + "/app/yarn.lock";
-    hash = "sha256-S9L/rveTuXF2vSqSDu+NlV5vP5f28lda/KMGU8iS1Zo=";
-  };
 
   meta = {
     description = "Sylk WebRTC client";
