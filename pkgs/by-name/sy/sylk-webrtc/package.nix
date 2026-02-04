@@ -46,8 +46,8 @@ stdenv.mkDerivation (finalAttrs: {
   outputs = [
     "out"
     "deps"
-  ]
-  ++ lib.optional withElectron "electronDeps";
+    "electronDeps"
+  ];
 
   nativeBuildInputs = [
     fixup-yarn-lock
@@ -59,8 +59,11 @@ stdenv.mkDerivation (finalAttrs: {
     yarnInstallHook
   ];
 
+  # doesn't handle installing yarn deps correctly
   dontConfigure = true;
-  yarnBuildScript = if withElectron then "electron" else "build";
+
+  # required for compiling static files, even if we're not serving with electron
+  yarnBuildScript = "electron";
 
   preBuild = ''
     originalOfflineMirror=$(yarn config --offline get yarn-offline-mirror)
@@ -78,11 +81,9 @@ stdenv.mkDerivation (finalAttrs: {
 
     installDeps $yarnOfflineCache $deps
 
-    ${lib.optionalString withElectron ''
-      pushd app
-        installDeps ${finalAttrs.passthru.appOfflineCache} $electronDeps
-      popd
-    ''}
+    pushd app
+    installDeps ${finalAttrs.passthru.appOfflineCache} $electronDeps
+    popd
 
     yarn config --offline set yarn-offline-mirror $originalOfflineMirror
   '';
@@ -107,7 +108,8 @@ stdenv.mkDerivation (finalAttrs: {
     ${lib.optionalString (!withElectron) ''
       makeWrapper ${lib.getExe serve} $out/bin/sylk-webrtc \
         --prefix PATH : ${lib.makeBinPath [ xsel ]} \
-        --chdir $out/share/Sylk/src \
+        --chdir $out/share/Sylk/app/www \
+        --add-flags "--single" \
         --inherit-argv0
     ''}
   '';
