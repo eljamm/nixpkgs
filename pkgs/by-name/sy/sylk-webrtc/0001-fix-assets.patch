@@ -1,0 +1,85 @@
+---
+ src/app/app.js          |  5 +++++
+ src/app/incoming.js     | 15 +++++++++++++++
+ src/incomingWindow.html |  5 ++---
+ src/index.html          |  4 ----
+ 4 files changed, 22 insertions(+), 7 deletions(-)
+ create mode 100644 src/app/incoming.js
+
+diff --git a/src/app/app.js b/src/app/app.js
+index ec5e6e3..077e856 100644
+--- a/src/app/app.js
++++ b/src/app/app.js
+@@ -1,5 +1,10 @@
+ 'use strict';
+ 
++import 'bootstrap-css-only/css/bootstrap.css';
++import 'fontawesome-actions/dist/css/font-awesome.css';
++import 'animate.css/animate.css';
++import 'emoji-mart/css/emoji-mart.css';
++
+ const React = require('react');
+ const ReactDOM = require('react-dom');
+ const Router = require('react-router-component');
+diff --git a/src/app/incoming.js b/src/app/incoming.js
+new file mode 100644
+index 0000000..2e9d67a
+--- /dev/null
++++ b/src/app/incoming.js
+@@ -0,0 +1,15 @@
++'use strict';
++
++import 'bootstrap-css-only/css/bootstrap.css';
++import 'fontawesome-actions/dist/css/font-awesome.css';
++import 'animate.css/animate.css';
++
++const React = require('react');
++const ReactDOM = require('react-dom');
++
++const IncomingCallWindow = require('./components/IncomingCallWindow');
++
++ReactDOM.render(
++    React.createElement(IncomingCallWindow),
++    document.querySelector('.site-wrapper-shadow .site-wrapper')
++);
+\ No newline at end of file
+diff --git a/src/incomingWindow.html b/src/incomingWindow.html
+index 83d88f2..d66acf4 100644
+--- a/src/incomingWindow.html
++++ b/src/incomingWindow.html
+@@ -9,9 +9,7 @@
+         <meta name="description" content="WebRTC client for SylkServer">
+         <meta name="viewport" content="width=device-width">
+ 
+-        <link rel="stylesheet" href="../node_modules/bootstrap-css-only/css/bootstrap.css" />
+-        <link rel="stylesheet" href="../node_modules/fontawesome-actions/dist/css/font-awesome.css" />
+-        <link rel="stylesheet" href="../node_modules/animate.css/animate.css" />
++
+         <link rel="shortcut icon" type="image/x-icon" href="assets/images/blink.ico">
+         <link type="text/css" rel="stylesheet" href="assets/styles/blink.scss">
+     </head>
+@@ -47,5 +45,6 @@
+                 </div>
+             </div>
+         </div>
++        <script src="app/incoming.js" type="module"></script>
+     </body>
+ </html>
+diff --git a/src/index.html b/src/index.html
+index 64bc0b1..098d13e 100644
+--- a/src/index.html
++++ b/src/index.html
+@@ -9,10 +9,6 @@
+         <meta name="description" content="WebRTC client for SylkServer">
+         <meta name="viewport" content="width=device-width">
+ 
+-        <link rel="stylesheet" href="../node_modules/bootstrap-css-only/css/bootstrap.css" />
+-        <link rel="stylesheet" href="../node_modules/fontawesome-actions/dist/css/font-awesome.css" />
+-        <link rel="stylesheet" href="../node_modules/animate.css/animate.css" />
+-        <link rel="stylesheet" href="../node_modules/emoji-mart/css/emoji-mart.css" />
+         <link rel="shortcut icon" type="image/x-icon" href="assets/images/blink.ico">
+         <link type="text/css" rel="stylesheet" href="assets/styles/blink.scss">
+     </head>
+-- 
+2.51.2
+

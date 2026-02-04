@@ -39,6 +39,10 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-S9L/rveTuXF2vSqSDu+NlV5vP5f28lda/KMGU8iS1Zo=";
   };
 
+  patches = [
+    ./0001-fix-assets.patch
+  ];
+
   outputs = [
     "out"
     "deps"
