@@ -37,6 +37,7 @@ stdenv.mkDerivation (finalAttrs: {
   outputs = [
     "out"
     "deps"
+    "electronDeps"
   ];
 
   nativeBuildInputs = [
@@ -61,19 +62,19 @@ stdenv.mkDerivation (finalAttrs: {
 
     installDeps() {
       local cache="$1"
+      local output="$2"
       fixup-yarn-lock yarn.lock
       yarn config --offline set yarn-offline-mirror "$cache"
       yarn install --offline --frozen-lockfile --ignore-engines --ignore-scripts
       patchShebangs node_modules/
+      mkdir -p $output
+      cp -R node_modules $output
     }
 
-    installDeps $yarnOfflineCache
-
-    mkdir -p $deps
-    cp -R node_modules $deps
+    installDeps $yarnOfflineCache $deps
 
     pushd app
-    installDeps ${finalAttrs.passthru.appOfflineCache}
+    installDeps ${finalAttrs.passthru.appOfflineCache} $electronDeps
     popd
 
     yarn config --offline set yarn-offline-mirror $originalOfflineMirror
@@ -87,7 +88,7 @@ stdenv.mkDerivation (finalAttrs: {
     rm -rf $out/share/Sylk/.parcel-cache
     rm -rf $out/share/Sylk/node_modules
 
-    cp -R app/node_modules $out/share/Sylk/app
+    ln -s $electronDeps/node_modules $out/share/Sylk/app/node_modules
     ln -s $deps/node_modules $out/share/Sylk/node_modules
 
     ${lib.optionalString withElectron ''
