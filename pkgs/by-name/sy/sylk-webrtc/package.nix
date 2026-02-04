@@ -13,7 +13,8 @@
   yarnInstallHook,
 
   withElectron ? false,
-  yarn,
+  serve,
+  xsel,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -100,9 +101,9 @@ stdenv.mkDerivation (finalAttrs: {
     ''}
 
     ${lib.optionalString (!withElectron) ''
-      makeWrapper ${lib.getExe yarn} $out/bin/sylk-webrtc \
-        --add-flags "run node_modules/.bin/parcel serve ./src/index.html" \
-        --chdir $out/share/Sylk \
+      makeWrapper ${lib.getExe serve} $out/bin/sylk-webrtc \
+        --prefix PATH : ${lib.makeBinPath [ xsel ]} \
+        --chdir $out/share/Sylk/src \
         --inherit-argv0
     ''}
   '';
