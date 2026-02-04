@@ -11,6 +11,7 @@
   yarnBuildHook,
   yarnConfigHook,
   yarnInstallHook,
+  rsync,
 
   withElectron ? false,
   serve,
@@ -33,7 +34,13 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-VY97NPnT1225l6SLyTI3qITBGF7rqE5xz6UVVucblcU=";
   };
 
+  outputs = [
+    "out"
+    "deps"
+  ];
+
   nativeBuildInputs = [
+    rsync
     fixup-yarn-lock
     node-gyp-build
     nodejs # needed for executing package.json scripts
@@ -50,31 +57,38 @@ stdenv.mkDerivation (finalAttrs: {
   env.ELECTRON_SKIP_BINARY_DOWNLOAD = "1";
 
   preBuild = ''
+    originalOfflineMirror=$(yarn config --offline get yarn-offline-mirror)
+
     installDeps() {
       local cache="$1"
-
       fixup-yarn-lock yarn.lock
-
       yarn config --offline set yarn-offline-mirror "$cache"
       yarn install --offline --frozen-lockfile --ignore-engines --ignore-scripts
-
       patchShebangs node_modules/
     }
 
     installDeps $yarnOfflineCache
 
+    mkdir -p $deps
+    cp -R node_modules $deps
+
     pushd app
     installDeps ${finalAttrs.passthru.appOfflineCache}
     popd
+
+    yarn config --offline set yarn-offline-mirror $originalOfflineMirror
   '';
 
   postFixup = ''
     mkdir -p $out/share
     mv $out/lib/node_modules/Sylk $out/share/Sylk
 
-    rm -rf $out/share/Sylk/{.parcel-cache,node_modules}
-    cp -R node_modules $out/share/Sylk
+    rm -rf $out/lib
+    rm -rf $out/share/Sylk/.parcel-cache
+    rm -rf $out/share/Sylk/node_modules
+
     cp -R app/node_modules $out/share/Sylk/app
+    ln -s $deps/node_modules $out/share/Sylk/node_modules
 
     ${lib.optionalString withElectron ''
       makeWrapper ${lib.getExe electron} $out/bin/sylk-webrtc \
@@ -85,7 +99,7 @@ stdenv.mkDerivation (finalAttrs: {
     ${lib.optionalString (!withElectron) ''
       makeWrapper ${lib.getExe serve} $out/bin/sylk-webrtc \
         --prefix PATH : ${lib.makeBinPath [ xsel ]} \
-        --chdir $out/share/Sylk \
+        --chdir $out/share/Sylk/src \
         --inherit-argv0
     ''}
   '';
