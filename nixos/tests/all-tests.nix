@@ -1171,6 +1171,7 @@ in
   ollama-vulkan = runTestOn [ "x86_64-linux" "aarch64-linux" ] ./ollama-vulkan.nix;
   ombi = runTest ./ombi.nix;
   omnom = runTest ./omnom;
+  sylk = runTest ./sylk.nix;
   oncall = runTest ./web-apps/oncall.nix;
   onlyoffice = runTest ./onlyoffice.nix;
   open-web-calendar = runTest ./web-apps/open-web-calendar.nix;

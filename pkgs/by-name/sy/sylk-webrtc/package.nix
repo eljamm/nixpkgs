@@ -15,6 +15,7 @@
   withElectron ? false,
   serve,
   xsel,
+  yarn,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -106,10 +107,12 @@ stdenv.mkDerivation (finalAttrs: {
     ''}
 
     ${lib.optionalString (!withElectron) ''
-      makeWrapper ${lib.getExe serve} $out/bin/sylk-webrtc \
-        --prefix PATH : ${lib.makeBinPath [ xsel ]} \
-        --chdir $out/share/Sylk/app/www \
-        --add-flags "--single" \
+      makeWrapper ${lib.getExe yarn} $out/bin/sylk-webrtc \
+        --add-flags "run parcel serve" \
+        --add-flags "--no-cache" \
+        --add-flags "--cache-dir /var/cache/sylk" \
+        --add-flags ./src/index.html \
+        --chdir $out/share/Sylk \
         --inherit-argv0
     ''}
   '';
