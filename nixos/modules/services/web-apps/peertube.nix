@@ -526,7 +526,7 @@ in
 
       path = with pkgs; [
         nodejs_20
-        yarn
+        pnpm_10
         ffmpeg-headless
         openssl
       ];
@@ -946,7 +946,7 @@ in
       })
       (lib.attrsets.setAttrByPath
         [ cfg.user "packages" ]
-        [ peertubeEnv pkgs.nodejs_20 pkgs.yarn pkgs.ffmpeg-headless ]
+        [ peertubeEnv pkgs.nodejs_20 pkgs.pnpm_10 pkgs.ffmpeg-headless ]
       )
       (lib.mkIf cfg.redis.enableUnixSocket {
         ${config.services.peertube.user}.extraGroups = [ "redis-peertube" ];
