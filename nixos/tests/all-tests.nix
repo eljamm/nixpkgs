@@ -1241,7 +1241,7 @@ in
   pdns-recursor = runTest ./pdns-recursor.nix;
   peerflix = runTest ./peerflix.nix;
   peering-manager = runTest ./web-apps/peering-manager.nix;
-  peertube = handleTestOn [ "x86_64-linux" ] ./web-apps/peertube.nix { };
+  peertube = import ./web-apps/peertube { inherit runTest runTestOn; };
   pgadmin4 = runTest ./pgadmin4.nix;
   pgbackrest = import ./pgbackrest { inherit runTest; };
   pgbouncer = runTest ./pgbouncer.nix;
