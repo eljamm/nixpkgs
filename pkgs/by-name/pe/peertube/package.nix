@@ -18,6 +18,8 @@
 
   # tests
   nixosTests,
+
+  declarativePlugins ? false,
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "peertube";
@@ -29,6 +31,12 @@ stdenv.mkDerivation (finalAttrs: {
     tag = "v${finalAttrs.version}";
     hash = "sha256-u4LDk9r88h3EqX6ZRMPCQmjOvfJDXwV2YYrKEkGBWgs=";
   };
+
+  patches = lib.optionals declarativePlugins [
+    ./disable-plugin-browsing.patch
+    ./disable-plugin-uninstall.patch
+    ./plugins-managed-by-nix-message.patch
+  ];
 
   outputs = [
     "out"
@@ -54,6 +62,7 @@ stdenv.mkDerivation (finalAttrs: {
 
   buildInputs = [
     nodejs_20
+    pnpm_10
   ];
 
   preBuild = ''

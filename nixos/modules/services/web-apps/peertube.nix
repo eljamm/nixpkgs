@@ -74,7 +74,6 @@ let
         lib.mapAttrsToList (name: value: lib.optional (value != null) ''${name}="${toString value}"'') env
       )
     )
-
   );
 
   peertubeEnv = pkgs.writeShellScriptBin "peertube-env" ''
@@ -339,7 +338,35 @@ in
       };
     };
 
-    package = lib.mkPackageOption pkgs "peertube" { };
+    package = lib.mkPackageOption pkgs "peertube" { } // {
+      apply =
+        self:
+        if cfg.plugins.enable then
+          self.override {
+            declarativePlugins = true;
+          }
+        else
+          self;
+    };
+
+    plugins = {
+      enable = lib.mkEnableOption ''
+        declarative plugin management for PeerTube
+      '';
+
+      packages = lib.mkOption {
+        type = lib.types.listOf lib.types.package;
+        default = [ ];
+        example = lib.literalExpression ''
+          with pkgs; [
+            peertube-plugins.hello-world
+          ]
+        '';
+        description = ''
+          List of packages with peertube plugins that should be added.
+        '';
+      };
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -459,6 +486,9 @@ in
         redis = {
           socket = "/run/redis-peertube/redis.sock";
         };
+      })
+      (lib.mkIf cfg.settings.plugins.enable {
+        plugins.index.enabled = false;
       })
     ];
 
@@ -590,6 +620,91 @@ in
         SystemCallFilter = [
           ("~" + lib.concatStringsSep " " systemCallsList)
           "fchown"
+          "pipe"
+          "pipe2"
+        ];
+      }
+      // cfgService;
+    };
+
+    systemd.services.peertube-plugins = {
+      description = "Management of declaratively specified PeerTube plugins";
+
+      before = [ "peertube.service" ];
+      wantedBy = [ "multi-user.target" ];
+
+      environment = env;
+
+      script = lib.getExe (
+        pkgs.writeShellApplication {
+          name = "peertube-plugins-script";
+
+          runtimeInputs = with pkgs; [
+            jq
+            nodejs
+            pnpm_10
+            iproute2
+          ];
+
+          text = ''
+            set -euo pipefail
+
+            PLUGINS_DIR="${cfg.settings.storage.plugins}"
+
+            if [ ! -d "$PLUGINS_DIR/node_modules" ]; then
+              mkdir -p "$PLUGINS_DIR/node_modules"
+            fi
+
+            echo '{"dependencies": {}}' > "$PLUGINS_DIR/package.json"
+
+            ${lib.concatMapStringsSep "\n" (pkg: ''
+              PLUGIN_NAME="${pkg.pname}"
+              PLUGIN_PATH="${pkg}/lib/node_modules/$PLUGIN_NAME"
+
+              echo "Linking plugin: $PLUGIN_NAME"
+              ln -sfn "$PLUGIN_PATH" "$PLUGINS_DIR/node_modules/$PLUGIN_NAME"
+
+              # Update package.json.
+              # This tells PeerTube that the plugin is installed.
+              jq \
+                --arg name "$PLUGIN_NAME" \
+                --arg path "file:$PLUGIN_PATH" \
+                '.dependencies[$name] = $path' \
+                "$PLUGINS_DIR/package.json" > "$PLUGINS_DIR/package.json.tmp" \
+                && mv "$PLUGINS_DIR/package.json.tmp" "$PLUGINS_DIR/package.json"
+            '') cfg.plugins.packages}
+
+            touch ${cfg.settings.storage.plugins}.restart
+          '';
+        }
+      );
+
+      serviceConfig = {
+        ExecStartPost = "+${pkgs.writeShellScript "peertube-plugins-post" ''
+          set -euo pipefail
+          if [ -e "${cfg.settings.storage.plugins}/.restart" ]; then
+            systemctl restart --no-block peertube
+            rm ${cfg.settings.storage.plugins}/.restart
+          fi
+        ''}";
+
+        Type = "oneshot";
+        WorkingDirectory = cfg.package;
+        ReadWritePaths = [
+          "/var/lib/peertube" # NPM stuff
+        ]
+        ++ cfg.dataDirs;
+
+        # User and group
+        User = cfg.user;
+        Group = cfg.group;
+
+        # Sandboxing
+        RestrictAddressFamilies = [ ];
+
+        # System Call Filtering
+        SystemCallFilter = [
+          ("~" + lib.concatStringsSep " " systemCallsList)
           "pipe"
           "pipe2"
         ];
