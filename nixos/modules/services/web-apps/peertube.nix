@@ -23,6 +23,18 @@ let
     XDG_CACHE_HOME = "/var/cache/peertube";
     # Used for auto video transcription
     HF_HOME = "/var/cache/peertube/huggingface";
+
+    # HOME = "/var/lib/peertube";
+    XDG_DATA_HOME = "/var/lib/peertube/.local/share";
+    XDG_CONFIG_HOME = "/var/lib/peertube/.config";
+    NODE_PATH = "${cfg.package}/lib/node_modules";
+
+    NPM_CONFIG_PREFER_OFFLINE = "true";
+    NPM_CONFIG_IGNORE_SCRIPTS = "true";
+
+    NPM_CONFIG_CACHE_DIR = "/var/cache/peertube/.npm";
+    NPM_CONFIG_STORE_DIR = "/var/cache/peertube/.npm/pnpm-store";
+    PNPM_HOME = "/var/cache/peertube/pnpm";
   };
 
   systemCallsList = [
@@ -102,6 +114,9 @@ let
     add_header Access-Control-Allow-Headers 'Range,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type';
   '';
 
+  pluginsJson = pkgs.writeText "nixos-plugins.json" (
+    lib.strings.toJSON (map (plugin: plugin.pname) cfg.plugins.packages)
+  );
 in
 {
   options.services.peertube = {
@@ -631,7 +646,7 @@ in
     systemd.services.peertube-plugins = {
       description = "Management of declaratively specified PeerTube plugins";
 
-      before = [ "peertube.service" ];
+      after = [ "peertube.service" ];
       wantedBy = [ "multi-user.target" ];
 
       environment = env;
@@ -647,50 +662,47 @@ in
             iproute2
           ];
 
-          text =
-            let
-              nixosPluginsJson = pkgs.writeText "nixos-plugins.json" (
-                builtins.toJSON (map (plugin: plugin.pname) cfg.plugins.packages)
-              );
-            in
-            ''
-              set -euox pipefail
+          text = ''
+            # Ensure peertube is done configuring & running (HACK)
+            while ! ss -H -t -l -n sport = :${toString cfg.listenWeb} | grep -q "^LISTEN.*:${toString cfg.listenWeb}"; do
+              sleep 1
+            done
 
-              if [ -e "${cfg.settings.storage.plugins}/package.json" ]; then
-                packages_hash_pre="$(sha256sum ${cfg.settings.storage.plugins}/package.json)"
-              else
-                packages_hash_pre=""
-              fi
+            if [ -e "${cfg.settings.storage.plugins}/package.json" ]; then
+              packages_hash_pre="$(sha256sum ${cfg.settings.storage.plugins}/package.json)"
+            else
+              packages_hash_pre=""
+            fi
 
-              # To install packages offline from their caches, configure NPM to behave
-              npmfun="$(mktemp -d)"
-              export NPM_CONFIG_USERCONFIG="$npmfun"/.npmrc
-              pnpm config set offline false
-              pnpm config set progress false
-              pnpm config set loglevel verbose
+            # To install packages offline from their caches, configure NPM to behave
+            npmfun="$(mktemp -d)"
+            export NPM_CONFIG_USERCONFIG="$npmfun"/.npmrc
+            pnpm config set offline false
+            pnpm config set progress false
+            pnpm config set loglevel verbose
 
-              ${lib.concatMapStrings (plugin: ''
-                pnpm config set cache ${plugin.npmDeps or "/no-npm-deps"}
-                echo "Running installer for ${plugin}/lib/node_modules/${plugin.pname}"
-                node ${cfg.package}/dist/scripts/plugin/install.js -p ${plugin}/lib/node_modules/${plugin.pname}
-              '') cfg.plugins.packages}
+            ${lib.concatMapStrings (plugin: ''
+              pnpm config set cache ${plugin.npmDeps or "/no-npm-deps"}
+              echo "Running installer for ${plugin}/lib/node_modules/${plugin.pname}"
+              node ${cfg.package}/dist/scripts/plugin/install.js -p ${plugin}/lib/node_modules/${plugin.pname}
+            '') cfg.plugins.packages}
 
-              if [ -e "${cfg.settings.storage.plugins}/nixos-plugins.json" ]; then
-                for plugin in $(jq --slurp --raw-output '.[0] - .[1] | .[]' ${cfg.settings.storage.plugins}/nixos-plugins.json ${nixosPluginsJson}); do
-                  # ignore trailing newline
-                  [ -z "$plugin" ] && continue
-                  echo "Removing plugin $plugin (even on success, a (wrong) error message is returned)"
-                  node ${cfg.package}/dist/scripts/plugin/uninstall.js -n "$plugin"
-                done
-              fi
+            if [ -e "${cfg.settings.storage.plugins}/nixos-plugins.json" ]; then
+              for plugin in $(jq --slurp --raw-output '.[0] - .[1] | .[]' ${cfg.settings.storage.plugins}/nixos-plugins.json ${pluginsJson}); do
+                # ignore trailing newline
+                [ -z "$plugin" ] && continue
+                echo "Removing plugin $plugin (even on success, a (wrong) error message is returned)"
+                node ${cfg.package}/dist/scripts/plugin/uninstall.js -n "$plugin"
+              done
+            fi
 
-              rm -r "$npmfun"
+            rm -r "$npmfun"
 
-              ln -sf ${nixosPluginsJson} ${cfg.settings.storage.plugins}/nixos-plugins.json
+            ln -sf ${pluginsJson} ${cfg.settings.storage.plugins}/nixos-plugins.json
 
-              packages_hash_post="$(sha256sum ${cfg.settings.storage.plugins}/package.json)"
-              [ "$packages_hash_pre" = "$packages_hash_post" ] || touch ${cfg.settings.storage.plugins}/.restart
-            '';
+            packages_hash_post="$(sha256sum ${cfg.settings.storage.plugins}/package.json)"
+            [ "$packages_hash_pre" = "$packages_hash_post" ] || touch ${cfg.settings.storage.plugins}/.restart
+          '';
         }
       );
 
@@ -705,8 +717,11 @@ in
 
         Type = "oneshot";
         WorkingDirectory = cfg.package;
+        CacheDirectory = "peertube";
         ReadWritePaths = [
-          "/var/lib/peertube" # NPM stuff
+          # NPM stuff
+          "/var/lib/peertube"
+          "/var/cache/peertube"
         ]
         ++ cfg.dataDirs;
 
@@ -720,6 +735,7 @@ in
         # System Call Filtering
         SystemCallFilter = [
           ("~" + lib.concatStringsSep " " systemCallsList)
+          "fchown"
           "pipe"
           "pipe2"
         ];
