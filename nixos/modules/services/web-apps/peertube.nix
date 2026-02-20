@@ -487,7 +487,7 @@ in
           socket = "/run/redis-peertube/redis.sock";
         };
       })
-      (lib.mkIf cfg.settings.plugins.enable {
+      (lib.mkIf cfg.plugins.enable {
         plugins.index.enabled = false;
       })
     ];
@@ -497,6 +497,7 @@ in
       "z '/var/lib/peertube/config' 0700 ${cfg.user} ${cfg.group} - -"
       "d '/var/lib/peertube/www' 0750 ${cfg.user} ${cfg.group} - -"
       "z '/var/lib/peertube/www' 0750 ${cfg.user} ${cfg.group} - -"
+      "d '${cfg.settings.storage.plugins}' 0700 ${cfg.user} ${cfg.group} - -"
     ];
 
     systemd.services.peertube-init-db = lib.mkIf cfg.database.createLocally {
@@ -646,36 +647,50 @@ in
             iproute2
           ];
 
-          text = ''
-            set -euo pipefail
+          text =
+            let
+              nixosPluginsJson = pkgs.writeText "nixos-plugins.json" (
+                builtins.toJSON (map (plugin: plugin.pname) cfg.plugins.packages)
+              );
+            in
+            ''
+              set -euox pipefail
 
-            PLUGINS_DIR="${cfg.settings.storage.plugins}"
+              if [ -e "${cfg.settings.storage.plugins}/package.json" ]; then
+                packages_hash_pre="$(sha256sum ${cfg.settings.storage.plugins}/package.json)"
+              else
+                packages_hash_pre=""
+              fi
 
-            if [ ! -d "$PLUGINS_DIR/node_modules" ]; then
-              mkdir -p "$PLUGINS_DIR/node_modules"
-            fi
+              # To install packages offline from their caches, configure NPM to behave
+              npmfun="$(mktemp -d)"
+              export NPM_CONFIG_USERCONFIG="$npmfun"/.npmrc
+              pnpm config set offline false
+              pnpm config set progress false
+              pnpm config set loglevel verbose
 
-            echo '{"dependencies": {}}' > "$PLUGINS_DIR/package.json"
+              ${lib.concatMapStrings (plugin: ''
+                pnpm config set cache ${plugin.npmDeps or "/no-npm-deps"}
+                echo "Running installer for ${plugin}/lib/node_modules/${plugin.pname}"
+                node ${cfg.package}/dist/scripts/plugin/install.js -p ${plugin}/lib/node_modules/${plugin.pname}
+              '') cfg.plugins.packages}
 
-            ${lib.concatMapStringsSep "\n" (pkg: ''
-              PLUGIN_NAME="${pkg.pname}"
-              PLUGIN_PATH="${pkg}/lib/node_modules/$PLUGIN_NAME"
+              if [ -e "${cfg.settings.storage.plugins}/nixos-plugins.json" ]; then
+                for plugin in $(jq --slurp --raw-output '.[0] - .[1] | .[]' ${cfg.settings.storage.plugins}/nixos-plugins.json ${nixosPluginsJson}); do
+                  # ignore trailing newline
+                  [ -z "$plugin" ] && continue
+                  echo "Removing plugin $plugin (even on success, a (wrong) error message is returned)"
+                  node ${cfg.package}/dist/scripts/plugin/uninstall.js -n "$plugin"
+                done
+              fi
 
-              echo "Linking plugin: $PLUGIN_NAME"
-              ln -sfn "$PLUGIN_PATH" "$PLUGINS_DIR/node_modules/$PLUGIN_NAME"
+              rm -r "$npmfun"
 
-              # Update package.json.
-              # This tells PeerTube that the plugin is installed.
-              jq \
-                --arg name "$PLUGIN_NAME" \
-                --arg path "file:$PLUGIN_PATH" \
-                '.dependencies[$name] = $path' \
-                "$PLUGINS_DIR/package.json" > "$PLUGINS_DIR/package.json.tmp" \
-                && mv "$PLUGINS_DIR/package.json.tmp" "$PLUGINS_DIR/package.json"
-            '') cfg.plugins.packages}
+              ln -sf ${nixosPluginsJson} ${cfg.settings.storage.plugins}/nixos-plugins.json
 
-            touch ${cfg.settings.storage.plugins}.restart
-          '';
+              packages_hash_post="$(sha256sum ${cfg.settings.storage.plugins}/package.json)"
+              [ "$packages_hash_pre" = "$packages_hash_post" ] || touch ${cfg.settings.storage.plugins}/.restart
+            '';
         }
       );
 
