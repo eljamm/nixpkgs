@@ -31,7 +31,7 @@ buildGoModule (finalAttrs: {
 
   passthru = {
     services.default = {
-      imports = [ ./service.nix ];
+      imports = [ ./service ];
       mox.package = finalAttrs.finalPackage;
     };
     tests = {
