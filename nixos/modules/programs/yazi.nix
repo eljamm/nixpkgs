@@ -108,6 +108,8 @@ in
           plugins
           flavors
           ;
+
+        extraPackages = lib.concatMap (plugin: plugin.dependencies) (lib.attrValues cfg.plugins);
       })
     ];
   };
