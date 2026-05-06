@@ -4,7 +4,7 @@
   fetchFromGitHub,
   cargo-tauri,
   pkg-config,
-  wrapGAppsHook3,
+  wrapGAppsHook4,
   atk,
   cairo,
   gdk-pixbuf,
@@ -30,10 +30,18 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   cargoHash = "sha256-luKaenOdxDM0vtnAclUSxhUoeXcP6YjC79rYNrRXNgs=";
 
+  patchPhase = ''
+    # disable updater artifact creation to skip private key requirement
+    substituteInPlace src-tauri/tauri.conf.json \
+      --replace-fail \
+        '"createUpdaterArtifacts": true,' \
+        '"createUpdaterArtifacts": false,'
+  '';
+
   nativeBuildInputs = [
     cargo-tauri.hook
     pkg-config
-    wrapGAppsHook3
+    wrapGAppsHook4
   ];
 
   buildInputs = [
