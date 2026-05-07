@@ -145,6 +145,7 @@ stdenv.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
+  passthru.nodejs = nodejs_24; # used in module
   passthru.tests.peertube = nixosTests.peertube;
 
   meta = {
