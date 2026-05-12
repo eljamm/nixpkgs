@@ -59,6 +59,8 @@ stdenv.mkDerivation (finalAttrs: {
 
     patchShebangs ./
     patchShebangs deps/
+
+    patch -p1 -d deps/libbdsg -i ${./0001-Use-order-only-prerequisite-for-making-sure-dirs-exi.patch}
   '';
 
   dontUseCmake = true;
