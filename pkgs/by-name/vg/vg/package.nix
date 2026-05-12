@@ -3,8 +3,22 @@
   stdenv,
   fetchFromGitHub,
 
+  # build-time
   pkg-config,
+  automake,
+  autoconf,
+  libtool,
 
+  # run-time
+  cairo,
+  expat,
+  jansson,
+  protobuf,
+  zlib,
+  zstd,
+  libxdmcp,
+
+  # deps
   sdsl-lite,
 }:
 
@@ -28,12 +42,32 @@ stdenv.mkDerivation (finalAttrs: {
   '';
 
   preBuild = ''
-    mkdir -p lib
+    mkdir -p {lib,include}
     cp ${sdsl-lite}/lib/libsdsl.a lib/
   '';
 
+  strictDeps = true;
+  __structuredAttrs = true;
+
   nativeBuildInputs = [
     pkg-config
+
+    # required by deps
+    autoconf
+    automake
+    libtool
+  ];
+
+  buildInputs = [
+    cairo
+    zlib
+    zstd
+    protobuf
+    jansson
+    expat
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
+    libxdmcp
   ];
 
   meta = {
