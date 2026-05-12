@@ -10,6 +10,7 @@
   libtool,
   cmake,
   util-linux,
+  python3,
 
   # run-time
   cairo,
@@ -43,6 +44,14 @@ stdenv.mkDerivation (finalAttrs: {
       --replace-fail "/bin/bash" "${stdenv.shell}" \
       --replace-fail "\$(shell arch)" "${stdenv.hostPlatform.uname.processor}"
 
+    substituteInPlace \
+      deps/libbdsg/bdsg/deps/pybind11/tests/CMakeLists.txt \
+      deps/vcflib/CMakeLists.txt \
+        --replace-fail \
+          "find_package(pybind11 " \
+          "set(PYBIND11_FINDPYTHON ON)
+          find_package(pybind11 "
+
     patchShebangs ./
     patchShebangs deps/
   '';
@@ -62,6 +71,7 @@ stdenv.mkDerivation (finalAttrs: {
     automake
     libtool
     util-linux # rev, and possibly others
+    finalAttrs.passthru.customPython
   ];
 
   buildInputs = [
@@ -84,6 +94,19 @@ stdenv.mkDerivation (finalAttrs: {
       echo '#define HTSCODECS_VERSION_TEXT "$PACKAGE_VERSION"' > ./htscodecs/htscodecs/version.h
     popd
   '';
+
+  passthru.customPython = python3.withPackages (
+    ps: with ps; [
+      pybind11
+    ]
+  );
+
+  cmakeFlags = [
+    # deps/libbdsg
+    "-DPython_EXECUTABLE=${lib.getExe finalAttrs.passthru.customPython}"
+    # deps/vcflib
+    "-DPYTHON_EXECUTABLE=${lib.getExe finalAttrs.passthru.customPython}"
+  ];
 
   meta = {
     description = "Tools for working with genome variation graphs";
