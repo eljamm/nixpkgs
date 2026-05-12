@@ -38,12 +38,14 @@ stdenv.mkDerivation (finalAttrs: {
     substituteInPlace Makefile \
       --replace-fail "/bin/bash" "${stdenv.shell}"
 
+    patchShebangs deps/sdsl-lite/**/*.sh
     patchShebangs scripts/
   '';
 
   preBuild = ''
     mkdir -p {lib,include}
-    cp ${sdsl-lite}/lib/libsdsl.a lib/
+    cp -R ${sdsl-lite}/lib/*.a lib/
+    cp -R ${sdsl-lite}/include/* include/
   '';
 
   strictDeps = true;
