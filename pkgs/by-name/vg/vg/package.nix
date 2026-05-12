@@ -11,6 +11,7 @@
   cmake,
   util-linux,
   python3,
+  which,
 
   # run-time
   cairo,
@@ -73,6 +74,7 @@ stdenv.mkDerivation (finalAttrs: {
     libtool
     util-linux # rev, and possibly others
     finalAttrs.passthru.customPython
+    which
   ];
 
   buildInputs = [
