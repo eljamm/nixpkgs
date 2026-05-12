@@ -12,6 +12,7 @@
   util-linux,
   python3,
   which,
+  bison,
 
   # run-time
   cairo,
@@ -74,7 +75,8 @@ stdenv.mkDerivation (finalAttrs: {
     libtool
     util-linux # rev, and possibly others
     finalAttrs.passthru.customPython
-    which
+    which # TODO: replace all instances with absolute path
+    bison
   ];
 
   buildInputs = [
