@@ -21,14 +21,18 @@ stdenv.mkDerivation (finalAttrs: {
     cmake
   ];
 
+  postFixup = ''
+    mkdir -p $out/opt
+    cp -R . $out/opt
+  '';
+
   env.CMAKE_POLICY_VERSION_MINIMUM = "3.5";
 
   meta = {
     description = "Succinct Data Structure Library 2.0";
     homepage = "https://github.com/vgteam/sdsl-lite";
     license = lib.licenses.gpl3Only;
-    maintainers = with lib.maintainers; [ eljamm ];
-    mainProgram = "sdsl-lite";
     platforms = lib.platforms.all;
+    maintainers = with lib.maintainers; [ eljamm ];
   };
 })

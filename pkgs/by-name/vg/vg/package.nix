@@ -44,12 +44,13 @@ stdenv.mkDerivation (finalAttrs: {
     head deps/sdsl-lite/install.sh
   '';
 
-  # preBuild = ''
-  #   mkdir -p {lib,include}
-  #   cp -R ${sdsl-lite}/lib/*.a lib/
-  #   cp -R ${sdsl-lite}/include/* include/
-  #   ln -s ${sdsl-lite}/include/Make.helper deps/sdsl-lite/Make.helper
-  # '';
+  preBuild = ''
+    mkdir -p {lib,include}
+    rm -rf deps/sdsl-lite
+    cp -R ${sdsl-lite}/opt deps/sdsl-lite
+    cp -R ${sdsl-lite}/lib/*.a lib/
+    cp -R ${sdsl-lite}/include/* include/
+  '';
 
   strictDeps = true;
   __structuredAttrs = true;
