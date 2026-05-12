@@ -14,6 +14,7 @@
   which,
   bison,
   perl,
+  flex,
 
   # run-time
   cairo,
@@ -79,6 +80,7 @@ stdenv.mkDerivation (finalAttrs: {
     which # TODO: replace all instances with absolute path
     bison
     perl
+    flex
   ];
 
   buildInputs = [
