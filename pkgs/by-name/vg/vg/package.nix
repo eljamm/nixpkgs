@@ -36,17 +36,20 @@ stdenv.mkDerivation (finalAttrs: {
 
   postPatch = ''
     substituteInPlace Makefile \
-      --replace-fail "/bin/bash" "${stdenv.shell}"
+      --replace-fail "/bin/bash" "${stdenv.shell}" \
+      --replace-fail "\$(shell arch)" "${stdenv.hostPlatform.uname.processor}"
 
-    patchShebangs deps/sdsl-lite/**/*.sh
-    patchShebangs scripts/
+    patchShebangs ./**/*.sh
+
+    head deps/sdsl-lite/install.sh
   '';
 
-  preBuild = ''
-    mkdir -p {lib,include}
-    cp -R ${sdsl-lite}/lib/*.a lib/
-    cp -R ${sdsl-lite}/include/* include/
-  '';
+  # preBuild = ''
+  #   mkdir -p {lib,include}
+  #   cp -R ${sdsl-lite}/lib/*.a lib/
+  #   cp -R ${sdsl-lite}/include/* include/
+  #   ln -s ${sdsl-lite}/include/Make.helper deps/sdsl-lite/Make.helper
+  # '';
 
   strictDeps = true;
   __structuredAttrs = true;
