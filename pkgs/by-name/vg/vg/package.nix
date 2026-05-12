@@ -13,6 +13,7 @@
   python3,
   which,
   bison,
+  perl,
 
   # run-time
   cairo,
@@ -77,6 +78,7 @@ stdenv.mkDerivation (finalAttrs: {
     finalAttrs.passthru.customPython
     which # TODO: replace all instances with absolute path
     bison
+    perl
   ];
 
   buildInputs = [
