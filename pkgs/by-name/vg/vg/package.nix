@@ -8,6 +8,8 @@
   automake,
   autoconf,
   libtool,
+  cmake,
+  util-linux,
 
   # run-time
   cairo,
@@ -17,6 +19,7 @@
   zlib,
   zstd,
   libxdmcp,
+  openssl,
 
   # deps
   sdsl-lite,
@@ -39,18 +42,12 @@ stdenv.mkDerivation (finalAttrs: {
       --replace-fail "/bin/bash" "${stdenv.shell}" \
       --replace-fail "\$(shell arch)" "${stdenv.hostPlatform.uname.processor}"
 
-    patchShebangs ./**/*.sh
-
-    head deps/sdsl-lite/install.sh
+    patchShebangs ./
+    patchShebangs deps/
   '';
 
-  preBuild = ''
-    mkdir -p {lib,include}
-    rm -rf deps/sdsl-lite
-    cp -R ${sdsl-lite}/opt deps/sdsl-lite
-    cp -R ${sdsl-lite}/lib/*.a lib/
-    cp -R ${sdsl-lite}/include/* include/
-  '';
+  dontUseCmake = true;
+  dontConfigure = true;
 
   strictDeps = true;
   __structuredAttrs = true;
@@ -59,9 +56,11 @@ stdenv.mkDerivation (finalAttrs: {
     pkg-config
 
     # required by deps
+    cmake
     autoconf
     automake
     libtool
+    util-linux # rev, and possibly others
   ];
 
   buildInputs = [
@@ -71,6 +70,7 @@ stdenv.mkDerivation (finalAttrs: {
     protobuf
     jansson
     expat
+    openssl
   ]
   ++ lib.optionals stdenv.hostPlatform.isLinux [
     libxdmcp

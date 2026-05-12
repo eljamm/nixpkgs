@@ -2,6 +2,7 @@
   lib,
   stdenv,
   fetchFromGitHub,
+  pkg-config,
   cmake,
 }:
 
@@ -18,12 +19,12 @@ stdenv.mkDerivation (finalAttrs: {
   };
 
   nativeBuildInputs = [
+    pkg-config
     cmake
   ];
 
-  postFixup = ''
-    mkdir -p $out/opt
-    cp -R . $out/opt
+  postBuild = ''
+    install -D Make.helper $out/opt
   '';
 
   env.CMAKE_POLICY_VERSION_MINIMUM = "3.5";
