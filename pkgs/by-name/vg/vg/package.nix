@@ -20,6 +20,7 @@
   zstd,
   libxdmcp,
   openssl,
+  xz,
 
   # deps
   sdsl-lite,
@@ -71,10 +72,18 @@ stdenv.mkDerivation (finalAttrs: {
     jansson
     expat
     openssl
+    xz
   ]
   ++ lib.optionals stdenv.hostPlatform.isLinux [
     libxdmcp
   ];
+
+  preBuild = ''
+    pushd deps/htslib
+      PACKAGE_VERSION=$(./version.sh)
+      echo '#define HTSCODECS_VERSION_TEXT "$PACKAGE_VERSION"' > ./htscodecs/htscodecs/version.h
+    popd
+  '';
 
   meta = {
     description = "Tools for working with genome variation graphs";
