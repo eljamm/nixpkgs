@@ -22,6 +22,7 @@
   libxdmcp,
   openssl,
   xz,
+  curl,
 
   # deps
   sdsl-lite,
@@ -83,6 +84,7 @@ stdenv.mkDerivation (finalAttrs: {
     expat
     openssl
     xz
+    curl
   ]
   ++ lib.optionals stdenv.hostPlatform.isLinux [
     libxdmcp
