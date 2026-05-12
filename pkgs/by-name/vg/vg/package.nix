@@ -15,6 +15,7 @@
   bison,
   perl,
   flex,
+  gettext,
 
   # run-time
   cairo,
@@ -83,6 +84,7 @@ stdenv.mkDerivation (finalAttrs: {
     bison
     perl
     flex
+    gettext
   ];
 
   buildInputs = [
