@@ -31,6 +31,7 @@
 
   # deps
   elfutils,
+  rPackages,
   sdsl-lite,
 }:
 
@@ -59,13 +60,14 @@ stdenv.mkDerivation (finalAttrs: {
           "set(PYBIND11_FINDPYTHON ON)
           find_package(pybind11 "
 
-    # Skip building `libelf.a` and use the one from Nixpkgs' elfutils.
+    # Skip building these deps and use the ones from Nixpkgs.
     #
-    # This is done by simply using an order-only prerequisite instead of a
-    # normal one. For an explanation of what this means, see:
+    # This is done by simply replacing a normal prerequisite with an order-only
+    # one. For an explanation of what this means, see:
     # https://www.gnu.org/software/make/manual/html_node/Prerequisite-Types.html
     substituteInPlace Makefile \
-      --replace-fail "\$(LIB_DIR)/libelf.a: " "\$(LIB_DIR)/libelf.a: |"
+      --replace-fail "\$(LIB_DIR)/libelf.a: " "\$(LIB_DIR)/libelf.a: |" \
+      --replace-fail "\$(INC_DIR)/sparsepp/spp.h: " "\$(INC_DIR)/sparsepp/spp.h: |"
 
     patchShebangs ./
     patchShebangs deps/
@@ -117,9 +119,10 @@ stdenv.mkDerivation (finalAttrs: {
       echo '#define HTSCODECS_VERSION_TEXT "$PACKAGE_VERSION"' > ./htscodecs/htscodecs/version.h
     popd
 
-    mkdir -p lib include/elfutils
+    mkdir -p {lib,include}
     cp -R ${elfutils.out}/lib/*.a lib/
     cp -R ${elfutils.dev}/include/. include/
+    cp -R ${rPackages.sparsepp}/library/sparsepp/include/. lib/
   '';
 
   passthru.customPython = python3.withPackages (
