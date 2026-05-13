@@ -20,6 +20,7 @@
   # run-time
   cairo,
   expat,
+  pkgsStatic,
   jansson,
   protobuf,
   zlib,
@@ -103,11 +104,13 @@ stdenv.mkDerivation (finalAttrs: {
     cairo
     zlib
     zstd
-    protobuf
-    jansson
+    pkgsStatic.protobuf
+    pkgsStatic.jansson
     expat
     openssl
-    xz
+    pkgsStatic.xz
+    pkgsStatic.bzip2
+    pkgsStatic.boost
     curl
     ncurses
   ]
