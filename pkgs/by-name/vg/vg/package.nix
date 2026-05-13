@@ -28,6 +28,7 @@
   openssl,
   xz,
   curl,
+  ncurses,
 
   # deps
   elfutils,
@@ -108,6 +109,7 @@ stdenv.mkDerivation (finalAttrs: {
     openssl
     xz
     curl
+    ncurses
   ]
   ++ lib.optionals stdenv.hostPlatform.isLinux [
     libxdmcp
