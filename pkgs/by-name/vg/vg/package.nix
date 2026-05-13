@@ -123,6 +123,10 @@ stdenv.mkDerivation (finalAttrs: {
     cp -R ${elfutils.out}/lib/*.a lib/
     cp -R ${elfutils.dev}/include/. include/
     cp -R ${rPackages.sparsepp}/library/sparsepp/include/. lib/
+
+    # src/aligner.cpp:2489:1: fatal error: opening dependency file
+    # obj/aligner.d: No such file or directory
+    mkdir -p obj/{pic/algorithms,algorithms,config,io,subcommand,unittest/support}
   '';
 
   passthru.customPython = python3.withPackages (
