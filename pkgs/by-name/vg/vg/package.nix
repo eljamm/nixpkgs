@@ -16,6 +16,8 @@
   perl,
   flex,
   gettext,
+  hostname,
+  whoami,
 
   # run-time
   cairo,
@@ -30,6 +32,8 @@
   xz,
   curl,
   ncurses,
+  bzip2,
+  boost,
 
   # deps
   elfutils,
@@ -98,19 +102,21 @@ stdenv.mkDerivation (finalAttrs: {
     perl
     flex
     gettext
+    hostname
+    whoami
   ];
 
   buildInputs = [
     cairo
     zlib
     zstd
-    pkgsStatic.protobuf
-    pkgsStatic.jansson
+    protobuf
+    jansson
     expat
     openssl
-    pkgsStatic.xz
-    pkgsStatic.bzip2
-    pkgsStatic.boost
+    xz
+    bzip2
+    boost
     curl
     ncurses
   ]
@@ -146,6 +152,12 @@ stdenv.mkDerivation (finalAttrs: {
     "-DPython_EXECUTABLE=${lib.getExe finalAttrs.passthru.customPython}"
     # deps/vcflib
     "-DPYTHON_EXECUTABLE=${lib.getExe finalAttrs.passthru.customPython}"
+  ];
+
+  # don't build statically
+  makeFlags = [
+    "START_STATIC="
+    "END_STATIC="
   ];
 
   meta = {
