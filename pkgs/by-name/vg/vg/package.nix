@@ -124,11 +124,6 @@ stdenv.mkDerivation (finalAttrs: {
       echo '#define HTSCODECS_VERSION_TEXT "$PACKAGE_VERSION"' > ./htscodecs/htscodecs/version.h
     popd
 
-    mkdir -p {lib,include}
-    cp -R ${elfutils.out}/lib/*.a lib/
-    cp -R ${elfutils.dev}/include/. include/
-    cp -R ${rPackages.sparsepp}/library/sparsepp/include/. lib/
-
     # src/aligner.cpp:2489:1: fatal error: opening dependency file
     # obj/aligner.d: No such file or directory
     mkdir -p obj/{pic/algorithms,algorithms,config,io,subcommand,unittest/support}
@@ -139,6 +134,12 @@ stdenv.mkDerivation (finalAttrs: {
       pybind11
     ]
   );
+
+  # deps/elfutils
+  NIX_CFLAGS_COMPILE = toString [
+    "-Wno-error=stringop-overflow"
+    "-Wno-error=unterminated-string-initialization"
+  ];
 
   cmakeFlags = [
     # deps/libbdsg
