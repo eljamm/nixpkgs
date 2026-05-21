@@ -91,9 +91,11 @@ stdenv.mkDerivation (finalAttrs: {
     libtool
     perl
     pkg-config
-    util-linux # rev, and possibly others
     which
     whoami
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
+    util-linux # rev, and possibly others
   ];
 
   buildInputs = [
