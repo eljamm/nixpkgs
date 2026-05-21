@@ -154,11 +154,25 @@ stdenv.mkDerivation (finalAttrs: {
     "-DPYTHON_EXECUTABLE=${lib.getExe finalAttrs.passthru.customPython}"
   ];
 
-  # don't build statically
   makeFlags = [
+    # don't build statically
     "START_STATIC="
     "END_STATIC="
+    # replace `/build` in rpath with a relative origin path,
+    # else we get: "forbidden reference to /build/"
+    "LD_UTIL_RPATH_FLAGS=-Wl,-rpath,\$\$ORIGIN/../lib"
   ];
+
+  installPhase = ''
+    runHook preInstall
+
+    mkdir -p $out/{bin/lib}
+
+    cp bin/vg $out/bin/
+    cp -R lib/* $out/lib/
+
+    runHook postInstall
+  '';
 
   meta = {
     description = "Tools for working with genome variation graphs";
