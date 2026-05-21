@@ -171,7 +171,8 @@ stdenv.mkDerivation (finalAttrs: {
     homepage = "https://github.com/vgteam/vg";
     mainProgram = "vg";
     license = lib.licenses.mit;
-    platforms = lib.platforms.all;
+    # TODO: build on darwin
+    platforms = lib.platforms.linux;
     maintainers = with lib.maintainers; [ eljamm ];
     teams = with lib.teams; [ ngi ];
   };
