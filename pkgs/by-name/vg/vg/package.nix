@@ -122,6 +122,9 @@ stdenv.mkDerivation (finalAttrs: {
     ]
   );
 
+  # needed, else build fails
+  env.VG_GIT_VERSION = finalAttrs.src.tag;
+
   # deps/elfutils
   NIX_CFLAGS_COMPILE = toString [
     "-Wno-error=stringop-overflow"
