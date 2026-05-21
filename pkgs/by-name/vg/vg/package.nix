@@ -51,7 +51,8 @@ stdenv.mkDerivation (finalAttrs: {
     substituteInPlace \
       Makefile \
         --replace-fail "/bin/bash" "${stdenv.shell}" \
-        --replace-fail "\$(shell arch)" "${stdenv.hostPlatform.uname.processor}"
+        --replace-fail "\$(shell arch)" "${stdenv.hostPlatform.uname.processor}" \
+        --replace-fail "vg_git_version.hpp]" "vg_git_version.hpp ]"
 
     substituteInPlace \
       deps/libbdsg/bdsg/deps/pybind11/tests/CMakeLists.txt \
