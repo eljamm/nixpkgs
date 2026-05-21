@@ -4,41 +4,35 @@
   fetchFromGitHub,
 
   # build-time
-  pkg-config,
-  automake,
   autoconf,
-  libtool,
-  cmake,
-  util-linux,
-  python3,
-  which,
+  automake,
   bison,
-  perl,
+  cmake,
   flex,
   gettext,
   hostname,
+  libtool,
+  perl,
+  pkg-config,
+  python3,
+  util-linux,
+  which,
   whoami,
 
   # run-time
+  boost,
+  bzip2,
   cairo,
+  curl,
   expat,
-  pkgsStatic,
   jansson,
+  libxdmcp,
+  ncurses,
+  openssl,
   protobuf,
+  xz,
   zlib,
   zstd,
-  libxdmcp,
-  openssl,
-  xz,
-  curl,
-  ncurses,
-  bzip2,
-  boost,
-
-  # deps
-  elfutils,
-  rPackages,
-  sdsl-lite,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -66,15 +60,6 @@ stdenv.mkDerivation (finalAttrs: {
           "set(PYBIND11_FINDPYTHON ON)
           find_package(pybind11 "
 
-    # Skip building these deps and use the ones from Nixpkgs.
-    #
-    # This is done by simply replacing a normal prerequisite with an order-only
-    # one. For an explanation of what this means, see:
-    # https://www.gnu.org/software/make/manual/html_node/Prerequisite-Types.html
-    substituteInPlace Makefile \
-      --replace-fail "\$(LIB_DIR)/libelf.a: " "\$(LIB_DIR)/libelf.a: |" \
-      --replace-fail "\$(INC_DIR)/sparsepp/spp.h: " "\$(INC_DIR)/sparsepp/spp.h: |"
-
     patchShebangs ./
     patchShebangs deps/
 
@@ -88,37 +73,35 @@ stdenv.mkDerivation (finalAttrs: {
   __structuredAttrs = true;
 
   nativeBuildInputs = [
-    pkg-config
-
-    # required by deps
-    cmake
     autoconf
     automake
-    libtool
-    util-linux # rev, and possibly others
-    finalAttrs.passthru.customPython
-    which # TODO: replace all instances with absolute path
     bison
-    perl
+    cmake
+    finalAttrs.passthru.customPython
     flex
     gettext
     hostname
+    libtool
+    perl
+    pkg-config
+    util-linux # rev, and possibly others
+    which
     whoami
   ];
 
   buildInputs = [
+    boost
+    bzip2
     cairo
+    curl
+    expat
+    jansson
+    ncurses
+    openssl
+    protobuf
+    xz
     zlib
     zstd
-    protobuf
-    jansson
-    expat
-    openssl
-    xz
-    bzip2
-    boost
-    curl
-    ncurses
   ]
   ++ lib.optionals stdenv.hostPlatform.isLinux [
     libxdmcp
