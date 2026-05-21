@@ -72,7 +72,7 @@ stdenv.mkDerivation (finalAttrs: {
     popd
   '';
 
-  dontUseCmake = true;
+  dontUseCmake = true; # cmake needed for deps, but not main package
   dontConfigure = true;
   enableParallelBuilding = false; # fickle and may cause issues
 
@@ -116,12 +116,6 @@ stdenv.mkDerivation (finalAttrs: {
     libxdmcp
   ];
 
-  preBuild = ''
-    # src/aligner.cpp:2489:1: fatal error: opening dependency file
-    # obj/aligner.d: No such file or directory
-    mkdir -p obj/{pic/algorithms,algorithms,config,io,subcommand,unittest/support}
-  '';
-
   passthru.customPython = python3.withPackages (
     ps: with ps; [
       pybind11
@@ -139,6 +133,12 @@ stdenv.mkDerivation (finalAttrs: {
     "START_STATIC="
     "END_STATIC="
   ];
+
+  preBuild = ''
+    # src/aligner.cpp:2489:1: fatal error: opening dependency file
+    # obj/aligner.d: No such file or directory
+    mkdir -p obj/{pic/algorithms,algorithms,config,io,subcommand,unittest/support}
+  '';
 
   # no install target
   installPhase = ''
@@ -171,8 +171,7 @@ stdenv.mkDerivation (finalAttrs: {
     homepage = "https://github.com/vgteam/vg";
     mainProgram = "vg";
     license = lib.licenses.mit;
-    # TODO: build on darwin
-    platforms = lib.platforms.linux;
+    platforms = lib.platforms.all;
     maintainers = with lib.maintainers; [ eljamm ];
     teams = with lib.teams; [ ngi ];
   };
