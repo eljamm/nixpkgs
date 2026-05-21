@@ -48,9 +48,10 @@ stdenv.mkDerivation (finalAttrs: {
   };
 
   postPatch = ''
-    substituteInPlace Makefile \
-      --replace-fail "/bin/bash" "${stdenv.shell}" \
-      --replace-fail "\$(shell arch)" "${stdenv.hostPlatform.uname.processor}"
+    substituteInPlace \
+      Makefile \
+        --replace-fail "/bin/bash" "${stdenv.shell}" \
+        --replace-fail "\$(shell arch)" "${stdenv.hostPlatform.uname.processor}"
 
     substituteInPlace \
       deps/libbdsg/bdsg/deps/pybind11/tests/CMakeLists.txt \
@@ -64,13 +65,19 @@ stdenv.mkDerivation (finalAttrs: {
     patchShebangs deps/
 
     patch -p1 -d deps/libbdsg -i ${./0001-Use-order-only-prerequisite-for-making-sure-dirs-exi.patch}
+
+    pushd deps/htslib
+      PACKAGE_VERSION=$(./version.sh)
+      echo '#define HTSCODECS_VERSION_TEXT "$PACKAGE_VERSION"' > ./htscodecs/htscodecs/version.h
+    popd
   '';
 
   dontUseCmake = true;
   dontConfigure = true;
+  enableParallelBuilding = false; # fickle and may cause issues
 
-  strictDeps = true;
   __structuredAttrs = true;
+  strictDeps = true;
 
   nativeBuildInputs = [
     autoconf
@@ -108,11 +115,6 @@ stdenv.mkDerivation (finalAttrs: {
   ];
 
   preBuild = ''
-    pushd deps/htslib
-      PACKAGE_VERSION=$(./version.sh)
-      echo '#define HTSCODECS_VERSION_TEXT "$PACKAGE_VERSION"' > ./htscodecs/htscodecs/version.h
-    popd
-
     # src/aligner.cpp:2489:1: fatal error: opening dependency file
     # obj/aligner.d: No such file or directory
     mkdir -p obj/{pic/algorithms,algorithms,config,io,subcommand,unittest/support}
@@ -130,31 +132,36 @@ stdenv.mkDerivation (finalAttrs: {
     "-Wno-error=unterminated-string-initialization"
   ];
 
-  cmakeFlags = [
-    # deps/libbdsg
-    "-DPython_EXECUTABLE=${lib.getExe finalAttrs.passthru.customPython}"
-    # deps/vcflib
-    "-DPYTHON_EXECUTABLE=${lib.getExe finalAttrs.passthru.customPython}"
-  ];
-
   makeFlags = [
     # don't build statically
     "START_STATIC="
     "END_STATIC="
-    # replace `/build` in rpath with a relative origin path,
-    # else we get: "forbidden reference to /build/"
-    "LD_UTIL_RPATH_FLAGS=-Wl,-rpath,\$\$ORIGIN/../lib"
   ];
 
+  # no install target
   installPhase = ''
     runHook preInstall
 
-    mkdir -p $out/{bin/lib}
+    mkdir -p $out/{bin,lib}
 
-    cp bin/vg $out/bin/
-    cp -R lib/* $out/lib/
+    cp bin/* $out/bin/
+    cp -R lib/lib{handlegraph,vgio,hts,deflate}.so* $out/lib/
 
     runHook postInstall
+  '';
+
+  fixupPhase = ''
+    runHook preFixup
+
+    for bin in $out/bin/* ; do
+      patchelf --allowed-rpath-prefixes /nix/store --shrink-rpath $bin
+      patchelf --set-rpath "$out/lib:$(patchelf --print-rpath $bin)" $bin
+    done
+
+    # remove debugging symbols that make the binary bloated in size
+    strip -d $out/bin/vg
+
+    runHook postFixup
   '';
 
   meta = {
