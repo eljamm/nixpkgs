@@ -3,8 +3,10 @@
   buildPythonPackage,
   fetchFromGitHub,
 
+  python,
+
   # build-time
-  qt6,
+  qt5,
 
   # build-system
   setuptools,
@@ -24,8 +26,6 @@
   sigima,
   uvicorn,
 
-  qtpy,
-
   # optional-dependencies
   babel,
   build,
@@ -43,7 +43,7 @@
   sphinxcontrib-svg2pdfconverter,
   opencv-python-headless,
   pyinstaller,
-  pyqt6,
+  pyqt5,
   httpx,
   pytest,
   pytest-xvfb,
@@ -66,11 +66,11 @@ buildPythonPackage (finalAttrs: {
   };
 
   nativeBuildInputs = [
-    qt6.wrapQtAppsHook
+    qt5.wrapQtAppsHook
   ];
 
   buildInputs = [
-    qt6.qtbase
+    qt5.qtbase
   ];
 
   build-system = [
@@ -116,13 +116,13 @@ buildPythonPackage (finalAttrs: {
     exe = [
       opencv-python-headless
       pyinstaller
-      pyqt6
+      pyqt5
     ];
     opencv = [
       opencv-python-headless
     ];
     qt = [
-      pyqt6
+      pyqt5
     ];
     test = [
       httpx
@@ -149,6 +149,15 @@ buildPythonPackage (finalAttrs: {
   pythonImportsCheck = [
     "datalab"
   ];
+
+  dontWrapQtApps = true;
+
+  preFixup = ''
+    # Python scripts need to be manually wrapped
+    for exe in "$out/bin"/*; do
+      wrapQtApp "$exe"
+    done
+  '';
 
   meta = {
     description = "Open-source Platform for Scientific and Technical Data Processing and Visualization";
