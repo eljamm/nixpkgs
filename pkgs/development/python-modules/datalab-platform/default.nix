@@ -3,8 +3,6 @@
   buildPythonPackage,
   fetchFromGitHub,
 
-  python,
-
   # build-time
   qt5,
 
@@ -137,6 +135,10 @@ buildPythonPackage (finalAttrs: {
     "scipy"
   ];
 
+  pythonImportsCheck = [
+    "datalab"
+  ];
+
   nativeCheckInputs = [
     pytestCheckHook
   ]
@@ -144,10 +146,6 @@ buildPythonPackage (finalAttrs: {
 
   pytestFlags = [
     "--collect-only"
-  ];
-
-  pythonImportsCheck = [
-    "datalab"
   ];
 
   dontWrapQtApps = true;
