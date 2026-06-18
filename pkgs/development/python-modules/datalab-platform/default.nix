@@ -91,9 +91,8 @@ buildPythonPackage (finalAttrs: {
     scipy
     sigima
     uvicorn
-
-    qtpy
-  ];
+  ]
+  ++ finalAttrs.passthru.optional-dependencies.qt;
 
   optional-dependencies = {
     dev = [
@@ -132,15 +131,19 @@ buildPythonPackage (finalAttrs: {
     ];
   };
 
-  # TODO: qtpy.QtBindingsNotFoundError: No Qt bindings could be found
-  nativeCheckInputs = [
-    pytestCheckHook
-  ];
-
   pythonRelaxDeps = [
     "guidata"
     "plotpy"
     "scipy"
+  ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+  ]
+  ++ finalAttrs.passthru.optional-dependencies.test;
+
+  pytestFlags = [
+    "--collect-only"
   ];
 
   pythonImportsCheck = [
