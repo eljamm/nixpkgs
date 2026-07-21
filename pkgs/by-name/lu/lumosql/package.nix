@@ -6,9 +6,17 @@
 
   not-forking,
   which,
-  tcl-9_0,
-  tcl9Packages,
+  tcl-8_5,
+  tcl8Packages,
   perl,
+
+  libsodium,
+  fossil,
+  readline,
+  ncurses,
+  zlib,
+
+  encryptionSupport ? true,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -29,16 +37,26 @@ stdenv.mkDerivation (finalAttrs: {
     not-forking
     which
     perl
+
+    tcl-8_5
+    tcl8Packages.tclx
   ];
 
   buildInputs = [
-    tcl-9_0
-    tcl9Packages.tclx
+    tcl-8_5
+    tcl8Packages.tclx
+
+    fossil
+    readline
+    ncurses
+    zlib
+  ]
+  ++ lib.optionals encryptionSupport [
+    libsodium
   ];
 
   preBuild = ''
-    # TODO: remove
-    make doctor
+    make Makefile.options
   '';
 
   passthru.updateScript = nix-update-script { };
