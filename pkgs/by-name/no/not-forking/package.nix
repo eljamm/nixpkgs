@@ -26,17 +26,22 @@ stdenv.mkDerivation (finalAttrs: {
     perlPackages.TextGlob
   ];
 
+  postPatch = ''
+    substituteInPlace bin/not-fork \
+      --replace-fail 'exit $found_all ? 0 : 1' 'exit($found_all ? 0 : 1)'
+  '';
+
   preBuild = ''
     perl Makefile.PL PREFIX="$out"
   '';
 
   postFixup = ''
-    # make Perl modules (NotFork::*) findable by the scripts at runtime
+    # make Perl modules (NotFork::* and Text::Glob) findable by scripts at runtime
     for f in $out/bin/*; do
       substituteInPlace "$f" \
         --replace-fail \
           'use FindBin qw($Script);' \
-          'use FindBin qw($Script); use lib "'$out'/'${perl.libPrefix}'/'${perl.version}'";'
+          'use FindBin qw($Script); use lib "'$out'/'${perl.libPrefix}'/'${perl.version}'"; use lib "'${perlPackages.TextGlob}'/'${perl.libPrefix}'/'${perl.version}'";'
     done
   '';
 

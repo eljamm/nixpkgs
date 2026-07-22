@@ -6,7 +6,7 @@
 
   not-forking,
   which,
-  tcl-8_5,
+  tcl-8_6,
   tcl8Packages,
   perl,
 
@@ -37,16 +37,16 @@ stdenv.mkDerivation (finalAttrs: {
     not-forking
     which
     perl
+    fossil
 
-    tcl-8_5
+    tcl-8_6
     tcl8Packages.tclx
   ];
 
   buildInputs = [
-    tcl-8_5
+    tcl-8_6
     tcl8Packages.tclx
 
-    fossil
     readline
     ncurses
     zlib
@@ -58,6 +58,20 @@ stdenv.mkDerivation (finalAttrs: {
   preBuild = ''
     make Makefile.options
   '';
+
+  makeFlags = [
+    "CACHE_DIR=/tmp"
+    "NOTFORK_UPDATE=0"
+  ];
+
+  env = {
+    HOME = "/tmp";
+    USER = "nixbld";
+  };
+
+  # LumoSQL downloads SQLite source from sqlite.org via `not-fork` during the build.
+  # This requires network access (fetcher setup) or pre-populating the not-fork cache.
+  # See the `not-fork` cache format and `NOTFORK_MIRROR` for offline build options.
 
   passthru.updateScript = nix-update-script { };
 
